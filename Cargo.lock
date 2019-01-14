@@ -597,7 +597,11 @@ version = "0.3.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "ppool"
+name = "ppool_server"
+version = "0.1.0"
+
+[[package]]
+name = "ppool_spider"
 version = "0.1.0"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",

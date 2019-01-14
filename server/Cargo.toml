@@ -1,0 +1,5 @@
+[package]
+name = "ppool_server"
+version = "0.1.0"
+authors = ["Aloxaf <aloxafx@gmail.com>"]
+edition = "2018"

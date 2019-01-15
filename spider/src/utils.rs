@@ -5,12 +5,14 @@ use libxml::{
     tree::{document::Document, node::Node},
     xpath::Context,
 };
-use reqwest::{header, ClientBuilder};
+use reqwest::{header, Client};
 use std::time::Duration;
 
+/// 获取网页
+#[cfg(not(feature = "local"))]
 pub fn get_html<S: AsRef<str>>(url: S) -> String {
-    let client = ClientBuilder::new()
-        .timeout(Duration::from_secs(10))
+    let client = Client::builder()
+        .timeout(Duration::from_secs(20))
         .build()
         .unwrap();
     let mut res = client.get(url.as_ref())
@@ -26,6 +28,23 @@ pub fn get_html<S: AsRef<str>>(url: S) -> String {
     res.text().unwrap()
 }
 
+/// 从本地加载 html
+/// 文件名为 ```url.split('.')[1]```
+#[cfg(feature = "local")]
+pub fn get_html<S: AsRef<str>>(url: S) -> String {
+    use log::debug;
+    use std::fs::File;
+    use std::io::Read;
+
+    let name = url.as_ref().split('.').skip(1).next().unwrap();
+    debug!("read local file ./tests/html/{}.html", name);
+    let mut file = File::open(format!("./tests/html/{}.html", name)).unwrap();
+    let mut ret = String::new();
+    file.read_to_string(&mut ret).unwrap();
+    ret
+}
+
+/// 从 html 生成 document 和 eval_xpath 函数
 pub fn get_xpath(html: &str) -> MyResult<(Document, impl Fn(&str, &Node) -> MyResult<Vec<Node>>)> {
     let parser = Parser::default_html();
     let document = parser.parse_string(&html)?;
@@ -41,6 +60,19 @@ pub fn get_xpath(html: &str) -> MyResult<(Document, impl Fn(&str, &Node) -> MyRe
     Ok((document, eval_xpath))
 }
 
-pub fn verify_proxy(_proxy: &Proxy) -> bool {
-    unimplemented!()
+/// 检测代理可用性
+/// TODO: http & https 区分
+pub fn verify_proxy(proxy: &Proxy) -> bool {
+    let proxy = reqwest::Proxy::http(&format!("http://{}:{}", proxy.ip(), proxy.port()))
+        .expect("fail to init proxy");
+    let client = Client::builder()
+        .timeout(Duration::from_secs(20))
+        .proxy(proxy)
+        .build()
+        .expect("failed to build client");
+    let res = match client.get("http://httpbin.org/ip").send() {
+        Ok(r) => r,
+        Err(_) => return false,
+    };
+    res.status().is_success()
 }

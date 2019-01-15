@@ -3,3 +3,11 @@ name = "ppool_server"
 version = "0.1.0"
 authors = ["Aloxaf <aloxafx@gmail.com>"]
 edition = "2018"
+
+[dependencies]
+env_logger = "0.6"
+log = "0.4"
+rand = "0.6"
+rocket = "0.4"
+ppool_spider = { path = "../spider" }
+serde_json = "1.0"

@@ -1,6 +1,9 @@
 use crate::error::MyResult;
 use crate::utils::*;
 use crate::Proxy;
+use log::info;
+
+pub const FUNCS: [fn() -> MyResult<Vec<Proxy>>; 2] = [get_xicidaili, get_jiangxianli];
 
 /// 西刺代理 http://www.xicidaili.com
 pub fn get_xicidaili() -> MyResult<Vec<Proxy>> {
@@ -22,6 +25,8 @@ pub fn get_xicidaili() -> MyResult<Vec<Proxy>> {
                     .collect::<Vec<_>>();
                 assert!(info.len() >= 4);
 
+                info!("xicidaili: get {}:{}", info[0], info[1]);
+
                 // mem::replace 会比 clone 高效吗
                 ret.push(Proxy {
                     ip: info[0].clone(),
@@ -35,7 +40,7 @@ pub fn get_xicidaili() -> MyResult<Vec<Proxy>> {
     Ok(ret)
 }
 
-/// guobanjia http://ip.jiangxianli.com
+/// jiangxianli http://ip.jiangxianli.com
 pub fn get_jiangxianli() -> MyResult<Vec<Proxy>> {
     let mut ret = vec![];
 
@@ -54,11 +59,13 @@ pub fn get_jiangxianli() -> MyResult<Vec<Proxy>> {
                 .collect::<Vec<_>>();
             assert!(info.len() >= 4);
 
+            info!("jiangxianli: get {}:{}", info[0], info[1]);
+
             ret.push(Proxy {
-                ip: info[1].clone(),
-                ssl: info[3].clone(),
-                port: info[2].parse::<u16>().expect("failed to parse port"),
-                anonymous: info[4].clone(),
+                ip: info[0].clone(),
+                ssl: info[2].clone(),
+                port: info[1].parse::<u16>().expect("failed to parse port"),
+                anonymous: info[3].clone(),
             })
         }
     }

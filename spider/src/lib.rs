@@ -1,10 +1,10 @@
 pub mod error;
 pub mod proxy_getter;
 pub mod utils;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 // TODO: anonymous 和 ssl 使用 enum
-#[derive(Debug, Clone, Eq, PartialEq, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Proxy {
     ip: String,
     port: u16,
@@ -22,18 +22,22 @@ impl Proxy {
         }
     }
 
+    #[inline]
     pub fn ip(&self) -> &str {
         &self.ip
     }
 
+    #[inline]
     pub fn port(&self) -> u16 {
         self.port
     }
 
+    #[inline]
     pub fn anonymous(&self) -> &str {
         &self.anonymous
     }
 
+    #[inline]
     pub fn ssl(&self) -> &str {
         &self.ssl
     }

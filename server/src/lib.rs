@@ -5,6 +5,7 @@ pub mod spider;
 
 use ppool_spider::Proxy;
 use rand::{seq::SliceRandom, thread_rng};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::mem;
 use std::sync::{Arc, Mutex};
@@ -13,7 +14,7 @@ pub type AProxyPool = Arc<Mutex<ProxyPool>>;
 // TODO: 这个地方不想用 String, 额外 clone 了一次
 pub type ProxyInfo = HashMap<String, Info>;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Info {
     /// 成功验证次数
     success: u32,
@@ -25,7 +26,7 @@ pub struct Info {
 /// 代理池
 /// O(1) 的插入时间复杂度
 /// O(1) 的随机取时间复杂度
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ProxyPool {
     /// 未验证的代理
     pub unverified: Vec<Proxy>,

@@ -5,12 +5,12 @@ use ppool_spider::Proxy;
 use threadpool::ThreadPool;
 
 fn inc_failed_cnt(proxies: AProxyPool, proxy: &Proxy) {
-    let mut proxies = proxies.lock().unwrap();
+    let mut proxies = proxies.lock().expect("inc failed");
     proxies.info.get_mut(proxy.ip()).unwrap().failed += 1;
 }
 
 fn inc_success_cnt(proxies: AProxyPool, proxy: &Proxy) {
-    let mut proxies = proxies.lock().unwrap();
+    let mut proxies = proxies.lock().expect("inc success");
     proxies.info.get_mut(proxy.ip()).unwrap().success += 1;
 }
 
@@ -21,7 +21,7 @@ pub fn checker_thread(proxies: AProxyPool) {
     // TODO: 避免 clone ?
     // 为了避免验证代理时造成阻塞, 先 clone 一遍
     let (verified, unverified) = {
-        let proxies = proxies.lock().unwrap();
+        let proxies = proxies.lock().expect("get lock: checker thread start");
         (
             proxies.get_verified().clone(),
             proxies.get_unverified().clone(),
@@ -43,7 +43,7 @@ pub fn checker_thread(proxies: AProxyPool) {
                 inc_success_cnt(proxies.clone(), &proxy);
             }
 
-            let mut proxies = proxies.lock().unwrap();
+            let mut proxies = proxies.lock().expect("get lock: after verified");
             let success = proxies.info.get(proxy.ip()).unwrap().success;
             let failed = proxies.info.get(proxy.ip()).unwrap().failed;
             if failed * 2 > success {
@@ -67,12 +67,12 @@ pub fn checker_thread(proxies: AProxyPool) {
         pool.execute(move || {
             if verify_proxy(&proxy) {
                 info!("[success] verify proxy: {}:{}", proxy.ip(), proxy.port());
-                let mut proxies = proxies.lock().unwrap();
+                let mut proxies = proxies.lock().expect("get lock: insert verified");
                 proxies.insert_verified(proxy.clone());
             } else {
                 info!("[failed] verify proxy: {}:{}", proxy.ip(), proxy.port());
             }
-            let mut proxies = proxies.lock().unwrap();
+            let mut proxies = proxies.lock().expect("get lock: remove unverified");
             proxies.remove_unverified(&proxy);
         });
     }

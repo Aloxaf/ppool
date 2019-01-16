@@ -5,10 +5,12 @@ authors = ["Aloxaf <aloxafx@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+app_dirs = "^1.2.1"
 env_logger = "0.6"
 log = "0.4"
 ppool_spider = { path = "../spider" }
 rand = "0.6"
 rocket = "0.4"
+serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 threadpool = "1.0"

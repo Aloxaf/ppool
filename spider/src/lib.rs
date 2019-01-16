@@ -3,22 +3,41 @@ pub mod proxy_getter;
 pub mod utils;
 use serde::{Deserialize, Serialize};
 
-// TODO: anonymous 和 ssl 使用 enum
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
+pub enum AnonymityLevel {
+    Transparent,
+    Anonymous,
+    Elite,
+}
+
+impl<T: Sized + AsRef<str>> From<T> for AnonymityLevel {
+    fn from(s: T) -> Self {
+        match s.as_ref() {
+            "高匿" => AnonymityLevel::Elite,
+            "匿名" => AnonymityLevel::Anonymous,
+            // 默认透明
+            _ => AnonymityLevel::Transparent,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Proxy {
     ip: String,
     port: u16,
-    anonymous: String,
-    ssl: String,
+    anonymity: AnonymityLevel,
+    http: bool,
+    https: bool,
 }
 
 impl Proxy {
-    pub fn new(ip: &str, port: u16, anonymous: &str, ssl: &str) -> Self {
+    pub fn new(ip: &str, port: u16, anonymity: AnonymityLevel, http: bool, https: bool) -> Self {
         Self {
             ip: ip.to_owned(),
             port,
-            anonymous: anonymous.to_owned(),
-            ssl: ssl.to_owned(),
+            anonymity,
+            http,
+            https,
         }
     }
 
@@ -33,13 +52,18 @@ impl Proxy {
     }
 
     #[inline]
-    pub fn anonymous(&self) -> &str {
-        &self.anonymous
+    pub fn anonymity(&self) -> AnonymityLevel {
+        self.anonymity
     }
 
     #[inline]
-    pub fn ssl(&self) -> &str {
-        &self.ssl
+    pub fn http(&self) -> bool {
+        self.http
+    }
+
+    #[inline]
+    pub fn https(&self) -> bool {
+        self.https
     }
 
     #[inline]

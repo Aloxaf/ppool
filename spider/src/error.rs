@@ -9,6 +9,8 @@ pub enum MyError {
     ContextInit,
     #[fail(display = "failed to evaluate xpath")]
     XPathEval,
+    #[fail(display = "http error")]
+    HttpError,
 }
 
 impl From<XmlParseError> for MyError {

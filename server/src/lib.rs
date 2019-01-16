@@ -3,7 +3,7 @@
 pub mod checker;
 pub mod spider;
 
-use ppool_spider::Proxy;
+use ppool_spider::{AnonymityLevel, Proxy};
 use rand::{seq::SliceRandom, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -51,8 +51,11 @@ impl ProxyPool {
 
     /// 插入新代理到已验证列表中
     pub fn insert_verified(&mut self, proxy: Proxy) {
-        self.info.insert(proxy.get_key(), Default::default());
-        self.verified.push(proxy);
+        let exist = self.info.get(&proxy.get_key()).is_some();
+        if !exist {
+            self.info.insert(proxy.get_key(), Default::default());
+            self.verified.push(proxy);
+        }
     }
 
     /// 删除一个未验证代理
@@ -71,6 +74,62 @@ impl ProxyPool {
     pub fn get_random(&mut self) -> &Proxy {
         let mut rng = thread_rng();
         self.verified.choose(&mut rng).unwrap()
+    }
+
+    // TODO: 效率太低了
+    /// 根据条件筛选代理
+    pub fn select(
+        &self,
+        http: Option<bool>,
+        https: Option<bool>,
+        anonymity: Option<String>,
+        stability: Option<f32>,
+    ) -> Vec<&Proxy> {
+        let mut iter = self.verified.iter().map(|x| x).collect::<Vec<_>>();
+        if let Some(http) = http {
+            iter = iter
+                .into_iter()
+                .filter(|proxy| proxy.http() == http)
+                .collect();
+        }
+        if let Some(https) = https {
+            iter = iter
+                .into_iter()
+                .filter(|proxy| proxy.https() == https)
+                .collect();
+        }
+        if let Some(anonymity) = anonymity {
+            let anonymity = AnonymityLevel::from(anonymity);
+            iter = iter
+                .into_iter()
+                .filter(|proxy| proxy.anonymity() == anonymity)
+                .collect();
+        }
+        if let Some(stability) = stability {
+            iter = iter
+                .into_iter()
+                .filter(|proxy| {
+                    let item = self.info.get(&proxy.get_key()).unwrap();
+                    let failed = item.failed as f32;
+                    let success = item.success as f32;
+                    success / (success + failed) >= stability
+                })
+                .collect()
+        }
+        iter
+    }
+
+    pub fn select_random(
+        &self,
+        http: Option<bool>,
+        https: Option<bool>,
+        anonymity: Option<String>,
+        stability: Option<f32>,
+    ) -> &Proxy {
+        let mut rng = thread_rng();
+        self.select(http, https, anonymity, stability)
+            .choose(&mut rng)
+            .unwrap()
     }
 
     /// 获取未验证代理的引用

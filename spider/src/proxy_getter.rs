@@ -1,6 +1,6 @@
 use crate::error::MyResult;
 use crate::utils::*;
-use crate::Proxy;
+use crate::{AnonymityLevel, Proxy};
 use log::info;
 
 pub const FUNCS: [fn() -> MyResult<Vec<Proxy>>; 2] = [get_xicidaili, get_jiangxianli];
@@ -12,7 +12,7 @@ pub fn get_xicidaili() -> MyResult<Vec<Proxy>> {
     // nn: 高匿  nt: 透明
     for _type in &["nn", "nt"] {
         for page in 1..=2 {
-            let html = get_html(format!("https://www.xicidaili.com/{}/{}", _type, page));
+            let html = get_html(format!("https://www.xicidaili.com/{}/{}", _type, page))?;
             let (document, eval_xpath) = get_xpath(&html)?;
             let root = document.get_root_element().unwrap();
 
@@ -20,7 +20,6 @@ pub fn get_xicidaili() -> MyResult<Vec<Proxy>> {
             for proxy in proxy_list {
                 let info = eval_xpath("./td[not(*)]/text()", &proxy)?
                     .iter()
-                    .take(4)
                     .filter_map(|node| {
                         // 这家代理有些列会空着, 导致提取数据错误
                         let s = document.node_to_string(node);
@@ -30,6 +29,7 @@ pub fn get_xicidaili() -> MyResult<Vec<Proxy>> {
                             Some(s)
                         }
                     })
+                    .take(4)
                     .collect::<Vec<_>>();
                 assert!(info.len() >= 4);
 
@@ -38,9 +38,10 @@ pub fn get_xicidaili() -> MyResult<Vec<Proxy>> {
                 // mem::replace 会比 clone 高效吗
                 ret.push(Proxy {
                     ip: info[0].clone(),
-                    ssl: info[3].clone(),
                     port: info[1].parse::<u16>().expect("failed to parse port"),
-                    anonymous: info[2].clone(),
+                    http: !info[3].contains("HTTPS"),
+                    https: info[3].contains("HTTPS"),
+                    anonymity: AnonymityLevel::from(&info[2]),
                 });
             }
         }
@@ -53,7 +54,7 @@ pub fn get_jiangxianli() -> MyResult<Vec<Proxy>> {
     let mut ret = vec![];
 
     for i in 1..=2 {
-        let html = get_html(format!("http://ip.jiangxianli.com/?page={}", i));
+        let html = get_html(format!("http://ip.jiangxianli.com/?page={}", i))?;
         let (document, eval_xpath) = get_xpath(&html)?;
         let root = document.get_root_element().unwrap();
 
@@ -71,9 +72,10 @@ pub fn get_jiangxianli() -> MyResult<Vec<Proxy>> {
 
             ret.push(Proxy {
                 ip: info[0].clone(),
-                ssl: info[2].clone(),
                 port: info[1].parse::<u16>().expect("failed to parse port"),
-                anonymous: info[3].clone(),
+                http: !info[3].contains("HTTPS"),
+                https: info[3].contains("HTTPS"),
+                anonymity: AnonymityLevel::from(&info[3]),
             })
         }
     }

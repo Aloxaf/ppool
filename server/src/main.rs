@@ -16,34 +16,67 @@ const APP_INFO: AppInfo = AppInfo {
 };
 
 #[get("/")]
-fn index(state: State<AProxyPool>) -> String {
+fn index(_state: State<AProxyPool>) -> &'static str {
+    r#"{
+  "get?<http:bool>&<https:bool>&<anonymity:str>&<stability:f32>": "随机获取一个代理, 无特殊需求请勿增加参数, 速度较慢",
+  "get_all?<http:bool>&<https:bool>&<anonymity:str>&<stability:f32>": "获取所有可用代理",
+  "get_status": "获取代理池信息",
+}"#
+}
+
+#[get("/get_status")]
+fn get_status(state: State<AProxyPool>) -> String {
     let proxies = state.lock().unwrap();
     let verified = proxies.get_verified().len();
     let unverified = proxies.get_unverified().len();
     format!(
-        "{{\n  \"total\": {},\n  \"verified\": {},\n  \"unverified\": {}\n}}",
+        r#"{{
+  "total": {},
+  "verified": {},
+  "unverified": {},
+}}"#,
         verified + unverified,
         verified,
         unverified
     )
 }
 
-#[get("/get")]
-fn get_single(state: State<AProxyPool>) -> String {
+#[get("/get?<http>&<https>&<anonymity>&<stability>")]
+fn get_single(
+    state: State<AProxyPool>,
+    http: Option<bool>,
+    https: Option<bool>,
+    anonymity: Option<String>,
+    stability: Option<f32>,
+) -> String {
     let mut proxies = state.lock().unwrap();
     if proxies.get_verified().len() == 0 {
         "[]".to_string()
-    } else {
+    } else if http.is_none() && https.is_none() && anonymity.is_none() && stability.is_none() {
         let proxy = proxies.get_random();
+        serde_json::to_string_pretty(proxy).unwrap()
+    } else {
+        let proxy = proxies.select_random(http, https, anonymity, stability);
         serde_json::to_string_pretty(proxy).unwrap()
     }
 }
 
-#[get("/get_all")]
-fn get_all(state: State<AProxyPool>) -> String {
+#[get("/get_all?<http>&<https>&<anonymity>&<stability>")]
+fn get_all(
+    state: State<AProxyPool>,
+    http: Option<bool>,
+    https: Option<bool>,
+    anonymity: Option<String>,
+    stability: Option<f32>,
+) -> String {
     let proxies = state.lock().unwrap();
-    let proxy = proxies.get_verified();
-    serde_json::to_string_pretty(proxy).unwrap()
+    if http.is_none() && https.is_none() && anonymity.is_none() && stability.is_none() {
+        let proxy = proxies.get_verified();
+        serde_json::to_string_pretty(proxy).unwrap()
+    } else {
+        let proxy = proxies.select(http, https, anonymity, stability);
+        serde_json::to_string_pretty(&proxy).unwrap()
+    }
 }
 
 fn main() {
@@ -57,7 +90,9 @@ fn main() {
 
     let proxies = {
         if let Ok(file) = File::open(&data_path) {
-            Arc::new(Mutex::new(serde_json::from_reader(file).expect("无法读取配置文件")))
+            Arc::new(Mutex::new(
+                serde_json::from_reader(file).expect("无法读取配置文件"),
+            ))
         } else {
             Arc::new(Mutex::new(ProxyPool::new()))
         }
@@ -79,7 +114,7 @@ fn main() {
     }
 
     rocket::ignite()
-        .mount("/", routes![index, get_single, get_all])
+        .mount("/", routes![index, get_status, get_single, get_all])
         .manage(proxies)
         .launch();
 }

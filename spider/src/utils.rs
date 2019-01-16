@@ -17,7 +17,7 @@ fn get_proxy() -> Option<reqwest::Proxy> {
         Err(_) => return None,
     };
     debug!("get proxy: {}:{}", proxy.ip(), proxy.port());
-    let proxy = reqwest::Proxy::https(&format!("https://{}:{}", proxy.ip(), proxy.port()))
+    let proxy = reqwest::Proxy::https(&format!("http://{}:{}", proxy.ip(), proxy.port()))
         .expect("build proxy error");
     Some(proxy)
 }

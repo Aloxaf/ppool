@@ -6,12 +6,20 @@ use threadpool::ThreadPool;
 
 fn inc_failed_cnt(proxies: AProxyPool, proxy: &Proxy) {
     let mut proxies = proxies.lock().expect("inc failed");
-    proxies.info.get_mut(&proxy.get_key()).expect("no key").failed += 1;
+    proxies
+        .info
+        .get_mut(&proxy.get_key())
+        .expect("no key")
+        .failed += 1;
 }
 
 fn inc_success_cnt(proxies: AProxyPool, proxy: &Proxy) {
     let mut proxies = proxies.lock().expect("inc success");
-    proxies.info.get_mut(&proxy.get_key()).expect("no key").success += 1;
+    proxies
+        .info
+        .get_mut(&proxy.get_key())
+        .expect("no key")
+        .success += 1;
 }
 
 /// 先过一遍已验证代理, 再将未验证代理验证一遍加入已验证代理

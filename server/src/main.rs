@@ -10,13 +10,20 @@ use std::time::Duration;
 #[get("/")]
 fn index(state: State<AProxyPool>) -> String {
     let proxies = state.lock().unwrap();
-    format!("total: {}", proxies.len())
+    let verified = proxies.get_verified().len();
+    let unverified = proxies.get_unverified().len();
+    format!(
+        r#"{{"total": {}, "verified": {}, "unverified": {}}}"#,
+        verified + unverified,
+        verified,
+        unverified
+    )
 }
 
 #[get("/get")]
 fn get_single(state: State<AProxyPool>) -> String {
     let mut proxies = state.lock().unwrap();
-    if proxies.len() == 0 {
+    if proxies.get_verified().len() == 0 {
         "[]".to_string()
     } else {
         let proxy = proxies.get_random();

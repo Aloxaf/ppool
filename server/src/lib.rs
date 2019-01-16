@@ -1,3 +1,5 @@
+#![feature(vec_remove_item)]
+
 pub mod checker;
 pub mod spider;
 
@@ -8,16 +10,29 @@ use std::mem;
 use std::sync::{Arc, Mutex};
 
 pub type AProxyPool = Arc<Mutex<ProxyPool>>;
+// TODO: 这个地方不想用 String, 额外 clone 了一次
+pub type ProxyInfo = HashMap<String, Info>;
 
+#[derive(Debug, Default)]
+pub struct Info {
+    /// 成功验证次数
+    success: u32,
+    /// 失败验证次数
+    failed: u32,
+}
+
+// 这个地方简直疯掉了, 干脆全部暴露出来让调用者自己处理
 /// 代理池
 /// O(1) 的插入时间复杂度
 /// O(1) 的随机取时间复杂度
 #[derive(Debug, Default)]
 pub struct ProxyPool {
-    /// 用于随机取
-    list: Vec<Proxy>,
+    /// 未验证的代理
+    pub unverified: Vec<Proxy>,
+    /// 验证过的代理
+    pub verified: Vec<Proxy>,
     /// 用于去重 & 记录验证失败次数
-    map: HashMap<String, i32>,
+    pub info: ProxyInfo,
 }
 
 impl ProxyPool {
@@ -25,48 +40,71 @@ impl ProxyPool {
         Default::default()
     }
 
-    pub fn insert(&mut self, proxy: Proxy) {
-        let exist = self.map.get(proxy.ip()).is_some();
+    /// 插入新代理到未验证列表中
+    pub fn insert_unverified(&mut self, proxy: Proxy) {
+        let exist = self.info.get(proxy.ip()).is_some();
         if !exist {
-            self.map.insert(proxy.ip().to_string(), 0);
-            self.list.push(proxy);
+            self.unverified.push(proxy);
         }
     }
 
-    pub fn len(&self) -> usize {
-        self.list.len()
+    /// 插入新代理到已验证列表中
+    pub fn insert_verified(&mut self, proxy: Proxy) {
+        self.info.insert(proxy.ip().to_string(), Default::default());
+        self.verified.push(proxy);
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+    /// 删除一个未验证代理
+    pub fn remove_unverified(&mut self, proxy: &Proxy) {
+        // 反正都用 rocket 了, unstable feature 用起来!
+        self.unverified.remove_item(proxy).unwrap();
     }
 
+    /// 删除一个已验证代理
+    pub fn remove_verified(&mut self, proxy: &Proxy) {
+        self.verified.remove_item(proxy).unwrap();
+        self.info.remove(proxy.ip()).unwrap();
+    }
+
+    /// 随机取出一个已验证代理
     pub fn get_random(&mut self) -> &Proxy {
         let mut rng = thread_rng();
-        self.list.choose(&mut rng).unwrap()
+        self.verified.choose(&mut rng).unwrap()
     }
 
-    pub fn get_list(&self) -> &Vec<Proxy> {
-        &self.list
+    /// 获取未验证代理的引用
+    pub fn get_unverified(&self) -> &Vec<Proxy> {
+        &self.unverified
     }
 
-    pub fn get_map(&self) -> &HashMap<String, i32> {
-        &self.map
+    /// 获取已验证代理的引用
+    pub fn get_verified(&self) -> &Vec<Proxy> {
+        &self.verified
     }
 
-    pub fn set_list(&mut self, list: Vec<Proxy>) {
-        mem::replace(&mut self.list, list);
+    /// 获取代理其他信息的引用
+    pub fn get_info(&self) -> &ProxyInfo {
+        &self.info
     }
 
-    pub fn set_map(&mut self, map: HashMap<String, i32>) {
-        mem::replace(&mut self.map, map);
+    /// 设置未验证代理
+    pub fn set_unverified(&mut self, unverified: Vec<Proxy>) {
+        mem::replace(&mut self.unverified, unverified);
     }
-}
 
-impl Extend<Proxy> for ProxyPool {
-    fn extend<T: IntoIterator<Item = Proxy>>(&mut self, iter: T) {
+    /// 设置已验证代理
+    pub fn set_verified(&mut self, verified: Vec<Proxy>) {
+        mem::replace(&mut self.verified, verified);
+    }
+
+    /// 设置代理信息
+    pub fn set_info(&mut self, info: ProxyInfo) {
+        mem::replace(&mut self.info, info);
+    }
+
+    fn extend_unverified<T: IntoIterator<Item = Proxy>>(&mut self, iter: T) {
         for proxy in iter {
-            self.insert(proxy);
+            self.insert_unverified(proxy);
         }
     }
 }

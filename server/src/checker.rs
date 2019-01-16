@@ -1,45 +1,71 @@
 use crate::AProxyPool;
 use log::info;
 use ppool_spider::utils::verify_proxy;
+use ppool_spider::Proxy;
+use threadpool::ThreadPool;
 
 // TODO: 多线程
-/// 验证代理的有效性
-/// 删除失败 3 次的代理
+
+fn inc_failed_cnt(proxies: AProxyPool, proxy: &Proxy) {
+    let mut proxies = proxies.lock().unwrap();
+    proxies.info.get_mut(proxy.ip()).unwrap().failed += 1;
+}
+
+fn inc_success_cnt(proxies: AProxyPool, proxy: &Proxy) {
+    let mut proxies = proxies.lock().unwrap();
+    proxies.info.get_mut(proxy.ip()).unwrap().success += 1;
+}
+
+/// 先过一遍已验证代理, 再将未验证代理验证一遍加入已验证代理
+/// 删除验证次数 >= 4 && 失败率 > 0.5 的代理
 pub fn checker_thread(proxies: AProxyPool) {
-    // 为了避免验证代理时造成阻塞, 先将内容移出
-    let (list, mut map) = {
-        let tmp = proxies.lock().unwrap();
-        (tmp.get_list().clone(), tmp.get_map().clone())
+    info!("checker thread start!");
+    // TODO: 避免 clone ?
+    // 为了避免验证代理时造成阻塞, 先 clone 一遍
+    let (verified, unverified) = {
+        let proxies = proxies.lock().unwrap();
+        (
+            proxies.get_verified().clone(),
+            proxies.get_unverified().clone(),
+        )
     };
 
-    let mut failed = vec![];
-    for i in 0..list.len() {
-        let proxy = &list[i];
+    // 验证已验证代理
+    for i in 0..verified.len() {
+        let proxy = &verified[i];
         if !verify_proxy(proxy) {
-            info!("verify proxy: {}:{}, false", proxy.ip(), proxy.port());
-            *map.get_mut(proxy.ip()).unwrap() += 1;
-            if *map.get(proxy.ip()).unwrap() == 3 {
-                failed.push(i);
-            }
+            info!("[failed] verify proxy: {}:{}", proxy.ip(), proxy.port());
+            inc_failed_cnt(proxies.clone(), proxy);
         } else {
-            info!("verify proxy: {}:{}, true", proxy.ip(), proxy.port());
+            info!("[success] verify proxy: {}:{}", proxy.ip(), proxy.port());
+            inc_success_cnt(proxies.clone(), proxy);
+        }
+
+        let mut proxies = proxies.lock().unwrap();
+        let success = proxies.info.get(proxy.ip()).unwrap().success;
+        let failed = proxies.info.get(proxy.ip()).unwrap().failed;
+        if failed * 2 > success {
+            info!(
+                "[{}/{}] delete proxy: {}:{}",
+                success,
+                failed,
+                proxy.ip(),
+                proxy.port()
+            );
+            proxies.remove_verified(proxy);
         }
     }
-    for i in &failed {
-        map.remove(list[*i].ip());
+
+    // 验证未验证代理
+    for proxy in unverified {
+        if verify_proxy(&proxy) {
+            info!("[success] verify proxy: {}:{}", proxy.ip(), proxy.port());
+            let mut proxies = proxies.lock().unwrap();
+            proxies.insert_verified(proxy.clone());
+        }
+        let mut proxies = proxies.lock().unwrap();
+        proxies.remove_unverified(&proxy);
     }
-    let list = list
-        .iter()
-        .enumerate()
-        .filter_map(|(idx, proxy)| {
-            if failed.contains(&idx) {
-                Some(proxy.to_owned())
-            } else {
-                None
-            }
-        })
-        .collect();
-    let mut proxies = proxies.lock().unwrap();
-    proxies.set_list(list);
-    proxies.set_map(map);
+
+    info!("checker thread end!");
 }

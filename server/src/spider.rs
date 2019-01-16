@@ -11,7 +11,7 @@ pub fn spider_thread(proxies: AProxyPool) {
             vec![]
         });
         let mut proxies = proxies.lock().unwrap();
-        proxies.extend(ret);
+        proxies.extend_unverified(ret);
     }
     info!("spider thread end!");
 }

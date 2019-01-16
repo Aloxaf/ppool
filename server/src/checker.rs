@@ -4,8 +4,6 @@ use ppool_spider::utils::verify_proxy;
 use ppool_spider::Proxy;
 use threadpool::ThreadPool;
 
-// TODO: 多线程
-
 fn inc_failed_cnt(proxies: AProxyPool, proxy: &Proxy) {
     let mut proxies = proxies.lock().unwrap();
     proxies.info.get_mut(proxy.ip()).unwrap().failed += 1;
@@ -30,42 +28,55 @@ pub fn checker_thread(proxies: AProxyPool) {
         )
     };
 
+    let pool = ThreadPool::new(20);
+
     // 验证已验证代理
     for i in 0..verified.len() {
-        let proxy = &verified[i];
-        if !verify_proxy(proxy) {
-            info!("[failed] verify proxy: {}:{}", proxy.ip(), proxy.port());
-            inc_failed_cnt(proxies.clone(), proxy);
-        } else {
-            info!("[success] verify proxy: {}:{}", proxy.ip(), proxy.port());
-            inc_success_cnt(proxies.clone(), proxy);
-        }
+        let proxy = verified[i].clone();
+        let proxies = proxies.clone();
+        pool.execute(move || {
+            if !verify_proxy(&proxy) {
+                info!("[failed] verify proxy: {}:{}", proxy.ip(), proxy.port());
+                inc_failed_cnt(proxies.clone(), &proxy);
+            } else {
+                info!("[success] verify proxy: {}:{}", proxy.ip(), proxy.port());
+                inc_success_cnt(proxies.clone(), &proxy);
+            }
 
-        let mut proxies = proxies.lock().unwrap();
-        let success = proxies.info.get(proxy.ip()).unwrap().success;
-        let failed = proxies.info.get(proxy.ip()).unwrap().failed;
-        if failed * 2 > success {
-            info!(
-                "[{}/{}] delete proxy: {}:{}",
-                success,
-                failed,
-                proxy.ip(),
-                proxy.port()
-            );
-            proxies.remove_verified(proxy);
-        }
+            let mut proxies = proxies.lock().unwrap();
+            let success = proxies.info.get(proxy.ip()).unwrap().success;
+            let failed = proxies.info.get(proxy.ip()).unwrap().failed;
+            if failed * 2 > success {
+                info!(
+                    "[{}/{}] delete proxy: {}:{}",
+                    success,
+                    failed,
+                    proxy.ip(),
+                    proxy.port()
+                );
+                proxies.remove_verified(&proxy);
+            }
+        });
     }
+    pool.join();
 
     // 验证未验证代理
     for proxy in unverified {
-        if verify_proxy(&proxy) {
-            info!("[success] verify proxy: {}:{}", proxy.ip(), proxy.port());
+        let proxy = proxy.clone();
+        let proxies = proxies.clone();
+        pool.execute(move || {
+            if verify_proxy(&proxy) {
+                info!("[success] verify proxy: {}:{}", proxy.ip(), proxy.port());
+                let mut proxies = proxies.lock().unwrap();
+                proxies.insert_verified(proxy.clone());
+            } else {
+                info!("[failed] verify proxy: {}:{}", proxy.ip(), proxy.port());
+            }
             let mut proxies = proxies.lock().unwrap();
-            proxies.insert_verified(proxy.clone());
-        }
-        let mut proxies = proxies.lock().unwrap();
-        proxies.remove_unverified(&proxy);
+            proxies.remove_unverified(&proxy);
+        });
     }
+    pool.join();
 
     info!("checker thread end!");
 }

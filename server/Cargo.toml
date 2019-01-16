@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 env_logger = "0.6"
 log = "0.4"
+ppool_spider = { path = "../spider" }
 rand = "0.6"
 rocket = "0.4"
 serde_json = "1.0"

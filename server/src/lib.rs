@@ -25,7 +25,7 @@ pub struct Info {
 // 这个地方简直疯掉了, 干脆全部暴露出来让调用者自己处理
 /// 代理池
 /// O(1) 的插入时间复杂度
-/// O(1) 的随机取时间复杂度
+/// O(1) 的随机取时间复杂度ip.to_string()
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ProxyPool {
     /// 未验证的代理
@@ -43,7 +43,7 @@ impl ProxyPool {
 
     /// 插入新代理到未验证列表中
     pub fn insert_unverified(&mut self, proxy: Proxy) {
-        let exist = self.info.get(proxy.ip()).is_some();
+        let exist = self.info.get(&proxy.get_key()).is_some();
         if !exist {
             self.unverified.push(proxy);
         }
@@ -51,7 +51,7 @@ impl ProxyPool {
 
     /// 插入新代理到已验证列表中
     pub fn insert_verified(&mut self, proxy: Proxy) {
-        self.info.insert(proxy.ip().to_string(), Default::default());
+        self.info.insert(proxy.get_key(), Default::default());
         self.verified.push(proxy);
     }
 
@@ -64,7 +64,7 @@ impl ProxyPool {
     /// 删除一个已验证代理
     pub fn remove_verified(&mut self, proxy: &Proxy) {
         self.verified.remove_item(proxy).unwrap();
-        self.info.remove(proxy.ip()).unwrap();
+        self.info.remove(&proxy.get_key()).unwrap();
     }
 
     /// 随机取出一个已验证代理

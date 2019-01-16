@@ -57,7 +57,7 @@ fn main() {
 
     let proxies = {
         if let Ok(file) = File::open(&data_path) {
-            Arc::new(Mutex::new(serde_json::from_reader(file).unwrap()))
+            Arc::new(Mutex::new(serde_json::from_reader(file).expect("无法读取配置文件")))
         } else {
             Arc::new(Mutex::new(ProxyPool::new()))
         }

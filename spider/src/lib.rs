@@ -41,4 +41,9 @@ impl Proxy {
     pub fn ssl(&self) -> &str {
         &self.ssl
     }
+
+    #[inline]
+    pub fn get_key(&self) -> String {
+        format!("{}:{}", self.ip, self.port)
+    }
 }

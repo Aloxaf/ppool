@@ -33,12 +33,18 @@ pub fn get_html<S: AsRef<str>>(url: S) -> String {
 #[cfg(feature = "local")]
 pub fn get_html<S: AsRef<str>>(url: S) -> String {
     use log::debug;
+    use std::env;
     use std::fs::File;
     use std::io::Read;
 
+    let mut self_path = env::current_dir().unwrap();
+    self_path.pop();
+    self_path.extend(&["spider", "tests", "html"]);
+
     let name = url.as_ref().split('.').skip(1).next().unwrap();
-    debug!("read local file ./tests/html/{}.html", name);
-    let mut file = File::open(format!("./tests/html/{}.html", name)).unwrap();
+    self_path.push(format!("{}.html", name));
+    debug!("read local file {:?}", self_path);
+    let mut file = File::open(self_path).unwrap();
     let mut ret = String::new();
     file.read_to_string(&mut ret).unwrap();
     ret

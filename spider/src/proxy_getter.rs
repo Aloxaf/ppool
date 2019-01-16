@@ -21,7 +21,15 @@ pub fn get_xicidaili() -> MyResult<Vec<Proxy>> {
                 let info = eval_xpath("./td[not(*)]/text()", &proxy)?
                     .iter()
                     .take(4)
-                    .map(|node| document.node_to_string(node))
+                    .filter_map(|node| {
+                        // 这家代理有些列会空着, 导致提取数据错误
+                        let s = document.node_to_string(node);
+                        if s.trim().is_empty() {
+                            None
+                        } else {
+                            Some(s)
+                        }
+                    })
                     .collect::<Vec<_>>();
                 assert!(info.len() >= 4);
 

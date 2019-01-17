@@ -18,8 +18,8 @@ const APP_INFO: AppInfo = AppInfo {
 #[get("/")]
 fn index(_state: State<AProxyPool>) -> &'static str {
     r#"{
-  "get?<http:bool>&<https:bool>&<anonymity:str>&<stability:f32>": "随机获取一个代理, 无特殊需求请勿增加参数, 速度较慢",
-  "get_all?<http:bool>&<https:bool>&<anonymity:str>&<stability:f32>": "获取所有可用代理",
+  "get?<ssl_type:str>&<anonymity:str>&<stability:f32>": "随机获取一个代理, 无特殊需求请勿增加参数, 速度较慢",
+  "get_all?<ssl_type:str>&<anonymity:str>&<stability:f32>": "获取所有可用代理",
   "get_status": "获取代理池信息",
 }"#
 }
@@ -41,40 +41,39 @@ fn get_status(state: State<AProxyPool>) -> String {
     )
 }
 
-#[get("/get?<http>&<https>&<anonymity>&<stability>")]
+// TODO: 提前搞个类型转换
+#[get("/get?<ssl_type>&<anonymity>&<stability>")]
 fn get_single(
     state: State<AProxyPool>,
-    http: Option<bool>,
-    https: Option<bool>,
+    ssl_type: Option<String>,
     anonymity: Option<String>,
     stability: Option<f32>,
 ) -> String {
     let mut proxies = state.lock().unwrap();
     if proxies.get_verified().len() == 0 {
         "[]".to_string()
-    } else if http.is_none() && https.is_none() && anonymity.is_none() && stability.is_none() {
+    } else if ssl_type.is_none() && anonymity.is_none() && stability.is_none() {
         let proxy = proxies.get_random();
         serde_json::to_string_pretty(proxy).unwrap()
     } else {
-        let proxy = proxies.select_random(http, https, anonymity, stability);
+        let proxy = proxies.select_random(ssl_type, anonymity, stability);
         serde_json::to_string_pretty(proxy).unwrap()
     }
 }
 
-#[get("/get_all?<http>&<https>&<anonymity>&<stability>")]
+#[get("/get_all?<ssl_type>&<anonymity>&<stability>")]
 fn get_all(
     state: State<AProxyPool>,
-    http: Option<bool>,
-    https: Option<bool>,
+    ssl_type: Option<String>,
     anonymity: Option<String>,
     stability: Option<f32>,
 ) -> String {
     let proxies = state.lock().unwrap();
-    if http.is_none() && https.is_none() && anonymity.is_none() && stability.is_none() {
+    if ssl_type.is_none() && anonymity.is_none() && stability.is_none() {
         let proxy = proxies.get_verified();
         serde_json::to_string_pretty(proxy).unwrap()
     } else {
-        let proxy = proxies.select(http, https, anonymity, stability);
+        let proxy = proxies.select(ssl_type, anonymity, stability);
         serde_json::to_string_pretty(&proxy).unwrap()
     }
 }

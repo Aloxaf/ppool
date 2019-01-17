@@ -76,6 +76,7 @@ pub fn checker_thread(proxies: AProxyPool) {
             if verify_proxy(&proxy) {
                 info!("[success] verify proxy: {}:{}", proxy.ip(), proxy.port());
                 let mut proxies = proxies.lock().expect("get lock: insert verified");
+                // TODO: 这个地方不应该立即放入, 否则代理质量不高
                 proxies.insert_verified(proxy.clone());
             } else {
                 info!("[failed] verify proxy: {}:{}", proxy.ip(), proxy.port());

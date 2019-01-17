@@ -11,7 +11,7 @@ use std::time::Duration;
 
 /// 获取代理
 fn get_proxy() -> Option<reqwest::Proxy> {
-    let mut res = reqwest::get("http://localhost:8000/get?https=true&anonymity=高匿").unwrap();
+    let mut res = reqwest::get("http://localhost:8000/get?ssl_type=HTTPS&anonymity=高匿&stability=0.7").unwrap();
     let proxy: Proxy = match serde_json::from_str(&res.text().unwrap()) {
         Ok(v) => v,
         Err(_) => return None,
@@ -25,11 +25,17 @@ fn get_proxy() -> Option<reqwest::Proxy> {
 /// 获取网页
 #[cfg(not(feature = "local"))]
 pub fn get_html<S: AsRef<str>>(url: S) -> MyResult<String> {
-    for _ in 0..5 {
+    for i in 0..5 {
         let mut client = Client::builder().timeout(Duration::from_secs(20));
-        if let Some(proxy) = get_proxy() {
-            client = client.proxy(proxy)
-        };
+        // 第一次不使用代理
+        if i > 0 {
+            if let Some(proxy) = get_proxy() {
+                client = client.proxy(proxy)
+            } else {
+                // 没有代理的话, 再尝试也没用了, 直接退出
+                break
+            }
+        }
         let client = client.build().unwrap();
         let res = client.get(url.as_ref())
             .header(header::CONNECTION, "keep-alive")
@@ -41,7 +47,11 @@ pub fn get_html<S: AsRef<str>>(url: S) -> MyResult<String> {
             .header(header::ACCEPT_LANGUAGE, "zh-CN,zh;q=0.8")
             .send();
         match res {
-            Ok(mut res) => return Ok(res.text().unwrap()),
+            Ok(mut res) => if res.status().is_success() {
+                return Ok(res.text().unwrap())
+            } else {
+                error!("get_html error: {}", res.status());
+            },
             Err(e) => error!("get_html error: {:?}", e),
         }
     }
@@ -86,7 +96,6 @@ pub fn get_xpath(html: &str) -> MyResult<(Document, impl Fn(&str, &Node) -> MyRe
 }
 
 /// 检测代理可用性
-/// TODO: http & https 区分
 pub fn verify_proxy(proxy: &Proxy) -> bool {
     let proxy = reqwest::Proxy::https(&format!("http://{}:{}", proxy.ip(), proxy.port()))
         .expect("fail to init proxy");

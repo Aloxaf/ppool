@@ -1,6 +1,6 @@
 use crate::error::MyResult;
 use crate::utils::*;
-use crate::{AnonymityLevel, Proxy};
+use crate::Proxy;
 use log::info;
 
 pub const FUNCS: [fn() -> MyResult<Vec<Proxy>>; 2] = [get_xicidaili, get_jiangxianli];
@@ -35,14 +35,7 @@ pub fn get_xicidaili() -> MyResult<Vec<Proxy>> {
 
                 info!("xicidaili: get {}:{}", info[0], info[1]);
 
-                // mem::replace 会比 clone 高效吗
-                ret.push(Proxy {
-                    ip: info[0].clone(),
-                    port: info[1].parse::<u16>().expect("failed to parse port"),
-                    http: !info[3].contains("HTTPS"),
-                    https: info[3].contains("HTTPS"),
-                    anonymity: AnonymityLevel::from(&info[2]),
-                });
+                ret.push(Proxy::new(&info[0], &info[1], &info[2], &info[3]));
             }
         }
     }
@@ -70,13 +63,7 @@ pub fn get_jiangxianli() -> MyResult<Vec<Proxy>> {
 
             info!("jiangxianli: get {}:{}", info[0], info[1]);
 
-            ret.push(Proxy {
-                ip: info[0].clone(),
-                port: info[1].parse::<u16>().expect("failed to parse port"),
-                http: !info[3].contains("HTTPS"),
-                https: info[3].contains("HTTPS"),
-                anonymity: AnonymityLevel::from(&info[3]),
-            })
+            ret.push(Proxy::new(&info[0], &info[1], &info[2], &info[3]))
         }
     }
     Ok(ret)

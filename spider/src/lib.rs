@@ -21,23 +21,37 @@ impl<T: Sized + AsRef<str>> From<T> for AnonymityLevel {
     }
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
+pub enum SslType {
+    HTTP,
+    HTTPS,
+}
+
+impl <T: Sized + AsRef<str>> From<T> for SslType {
+    fn from(s: T) -> Self {
+        match s.as_ref() {
+            "HTTPS" | "https" => SslType::HTTPS,
+            // 默认 HTTP
+            _ => SslType::HTTP,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Proxy {
     ip: String,
     port: u16,
     anonymity: AnonymityLevel,
-    http: bool,
-    https: bool,
+    ssl_type: SslType,
 }
 
 impl Proxy {
-    pub fn new(ip: &str, port: u16, anonymity: AnonymityLevel, http: bool, https: bool) -> Self {
+    pub fn new(ip: &str, port: &str, anonymity: &str, ssl_type: &str) -> Self {
         Self {
             ip: ip.to_owned(),
-            port,
-            anonymity,
-            http,
-            https,
+            port: port.parse::<u16>().expect("failed to parse port"),
+            anonymity: AnonymityLevel::from(anonymity),
+            ssl_type: SslType::from(ssl_type),
         }
     }
 
@@ -57,13 +71,8 @@ impl Proxy {
     }
 
     #[inline]
-    pub fn http(&self) -> bool {
-        self.http
-    }
-
-    #[inline]
-    pub fn https(&self) -> bool {
-        self.https
+    pub fn ssl_type(&self) -> SslType {
+        self.ssl_type
     }
 
     #[inline]

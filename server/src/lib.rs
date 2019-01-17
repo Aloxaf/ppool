@@ -3,7 +3,7 @@
 pub mod checker;
 pub mod spider;
 
-use ppool_spider::{AnonymityLevel, Proxy};
+use ppool_spider::{AnonymityLevel, Proxy, SslType};
 use rand::{seq::SliceRandom, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -80,22 +80,16 @@ impl ProxyPool {
     /// 根据条件筛选代理
     pub fn select(
         &self,
-        http: Option<bool>,
-        https: Option<bool>,
+        ssl_type: Option<String>,
         anonymity: Option<String>,
         stability: Option<f32>,
     ) -> Vec<&Proxy> {
         let mut iter = self.verified.iter().map(|x| x).collect::<Vec<_>>();
-        if let Some(http) = http {
+        if let Some(ssl_type) = ssl_type {
+            let ssl_type = SslType::from(ssl_type);
             iter = iter
                 .into_iter()
-                .filter(|proxy| proxy.http() == http)
-                .collect();
-        }
-        if let Some(https) = https {
-            iter = iter
-                .into_iter()
-                .filter(|proxy| proxy.https() == https)
+                .filter(|proxy| proxy.ssl_type() == ssl_type)
                 .collect();
         }
         if let Some(anonymity) = anonymity {
@@ -121,13 +115,12 @@ impl ProxyPool {
 
     pub fn select_random(
         &self,
-        http: Option<bool>,
-        https: Option<bool>,
+        ssl_type: Option<String>,
         anonymity: Option<String>,
         stability: Option<f32>,
     ) -> &Proxy {
         let mut rng = thread_rng();
-        self.select(http, https, anonymity, stability)
+        self.select(ssl_type, anonymity, stability)
             .choose(&mut rng)
             .unwrap()
     }

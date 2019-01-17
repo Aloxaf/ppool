@@ -27,17 +27,17 @@ fn index(_state: State<AProxyPool>) -> &'static str {
 #[get("/get_status")]
 fn get_status(state: State<AProxyPool>) -> String {
     let proxies = state.lock().unwrap();
-    let verified = proxies.get_verified().len();
-    let unverified = proxies.get_unverified().len();
+    let stable_cnt = proxies.get_stable().len();
+    let unstable_cnt = proxies.get_unstable().len();
     format!(
         r#"{{
   "total": {},
-  "verified": {},
-  "unverified": {},
+  "stable": {},
+  "unstable": {},
 }}"#,
-        verified + unverified,
-        verified,
-        unverified
+        stable_cnt + unstable_cnt,
+        stable_cnt,
+        unstable_cnt
     )
 }
 
@@ -50,7 +50,7 @@ fn get_single(
     stability: Option<f32>,
 ) -> String {
     let mut proxies = state.lock().unwrap();
-    if proxies.get_verified().len() == 0 {
+    if proxies.get_stable().len() == 0 {
         "[]".to_string()
     } else if ssl_type.is_none() && anonymity.is_none() && stability.is_none() {
         let proxy = proxies.get_random();
@@ -70,7 +70,7 @@ fn get_all(
 ) -> String {
     let proxies = state.lock().unwrap();
     if ssl_type.is_none() && anonymity.is_none() && stability.is_none() {
-        let proxy = proxies.get_verified();
+        let proxy = proxies.get_stable();
         serde_json::to_string_pretty(proxy).unwrap()
     } else {
         let proxy = proxies.select(ssl_type, anonymity, stability);
@@ -103,11 +103,11 @@ fn main() {
         thread::spawn(move || loop {
             spider_thread(proxies.clone());
             checker_thread(proxies.clone());
-            info!("writing to disk");
+            info!("写入到磁盘");
             let data = serde_json::to_string_pretty(&proxies).unwrap();
             let mut file = File::create(&data_path).unwrap();
             file.write(data.as_bytes()).unwrap();
-            info!("sleeping for 10 mins...");
+            info!("等待10分钟...");
             sleep(Duration::from_secs(60 * 10));
         });
     }

@@ -16,7 +16,7 @@ fn get_proxy() -> Option<reqwest::Proxy> {
         Ok(v) => v,
         Err(_) => return None,
     };
-    debug!("get proxy: {}:{}", proxy.ip(), proxy.port());
+    debug!("获取代理: {}:{}", proxy.ip(), proxy.port());
     let proxy = reqwest::Proxy::https(&format!("http://{}:{}", proxy.ip(), proxy.port()))
         .expect("build proxy error");
     Some(proxy)
@@ -50,9 +50,9 @@ pub fn get_html<S: AsRef<str>>(url: S) -> MyResult<String> {
             Ok(mut res) => if res.status().is_success() {
                 return Ok(res.text().unwrap())
             } else {
-                error!("get_html error: {}", res.status());
+                error!("get_html 错误: {}", res.status());
             },
-            Err(e) => error!("get_html error: {:?}", e),
+            Err(e) => error!("get_html 错误: {:?}", e),
         }
     }
     Err(MyError::HttpError)
@@ -72,7 +72,7 @@ pub fn get_html<S: AsRef<str>>(url: S) -> MyResult<String> {
 
     let name = url.as_ref().split('.').skip(1).next().unwrap();
     self_path.push(format!("{}.html", name));
-    debug!("read local file {:?}", self_path);
+    debug!("读取本地文件 {:?}", self_path);
     let mut file = File::open(self_path).unwrap();
     let mut ret = String::new();
     file.read_to_string(&mut ret).unwrap();
@@ -96,7 +96,7 @@ pub fn get_xpath(html: &str) -> MyResult<(Document, impl Fn(&str, &Node) -> MyRe
 }
 
 /// 检测代理可用性
-pub fn verify_proxy(proxy: &Proxy) -> bool {
+pub fn check_proxy(proxy: &Proxy) -> bool {
     let proxy = reqwest::Proxy::https(&format!("http://{}:{}", proxy.ip(), proxy.port()))
         .expect("fail to init proxy");
     let client = Client::builder()

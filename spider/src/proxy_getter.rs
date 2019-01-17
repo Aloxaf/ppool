@@ -33,7 +33,7 @@ pub fn get_xicidaili() -> MyResult<Vec<Proxy>> {
                     .collect::<Vec<_>>();
                 assert!(info.len() >= 4);
 
-                info!("xicidaili: get {}:{}", info[0], info[1]);
+                info!("xicidaili: {}:{}", info[0], info[1]);
 
                 ret.push(Proxy::new(&info[0], &info[1], &info[2], &info[3]));
             }
@@ -61,7 +61,7 @@ pub fn get_jiangxianli() -> MyResult<Vec<Proxy>> {
                 .collect::<Vec<_>>();
             assert!(info.len() >= 4);
 
-            info!("jiangxianli: get {}:{}", info[0], info[1]);
+            info!("jiangxianli: {}:{}", info[0], info[1]);
 
             ret.push(Proxy::new(&info[0], &info[1], &info[2], &info[3]))
         }

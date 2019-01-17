@@ -1,6 +1,6 @@
 use crate::AProxyPool;
 use log::info;
-use ppool_spider::utils::verify_proxy;
+use ppool_spider::utils::check_proxy;
 use ppool_spider::Proxy;
 use threadpool::ThreadPool;
 
@@ -22,70 +22,95 @@ fn inc_success_cnt(proxies: AProxyPool, proxy: &Proxy) {
         .success += 1;
 }
 
-/// 先过一遍已验证代理, 再将未验证代理验证一遍加入已验证代理
-/// 删除验证次数 >= 4 && 失败率 > 0.5 的代理
-pub fn checker_thread(proxies: AProxyPool) {
-    info!("checker thread start!");
+// 验证已验证代理
+fn check_stable(proxies: AProxyPool) {
     // TODO: 避免 clone ?
     // 为了避免验证代理时造成阻塞, 先 clone 一遍
-    let (verified, unverified) = {
+    let stable = {
         let proxies = proxies.lock().expect("get lock: checker thread start");
-        (
-            proxies.get_verified().clone(),
-            proxies.get_unverified().clone(),
-        )
+        proxies.get_stable().clone()
     };
 
     let pool = ThreadPool::new(20);
 
-    // 验证已验证代理
-    for i in 0..verified.len() {
-        let proxy = verified[i].clone();
+    for i in 0..stable.len() {
+        // TODO: 避免 clone ?
+        let proxy = stable[i].clone();
         let proxies = proxies.clone();
         pool.execute(move || {
-            if !verify_proxy(&proxy) {
-                info!("[failed] verify proxy: {}:{}", proxy.ip(), proxy.port());
+            if !check_proxy(&proxy) {
+                info!("验证成功: {}:{}", proxy.ip(), proxy.port());
                 inc_failed_cnt(proxies.clone(), &proxy);
             } else {
-                info!("[success] verify proxy: {}:{}", proxy.ip(), proxy.port());
+                info!("验证失败: {}:{}", proxy.ip(), proxy.port());
                 inc_success_cnt(proxies.clone(), &proxy);
             }
 
-            let mut proxies = proxies.lock().expect("get lock: after verified");
+            let mut proxies = proxies.lock().expect("get lock: after stable");
             let success = proxies.info.get(&proxy.get_key()).expect("no key").success;
             let failed = proxies.info.get(&proxy.get_key()).expect("no key").failed;
-            if failed + success >= 4 && failed * 2 > success {
+            if failed > success {
                 info!(
-                    "[{}/{}] delete proxy: {}:{}",
-                    success,
+                    "失败次数:{}/{}, 从已验证列表移出",
                     failed,
-                    proxy.ip(),
-                    proxy.port()
+                    success + failed
                 );
-                proxies.remove_verified(&proxy);
+                proxies.remove_stable(&proxy);
             }
         });
     }
     pool.join();
+}
 
-    // 验证未验证代理
-    for proxy in unverified {
+// 验证未验证代理
+fn check_unstable(proxies: AProxyPool) {
+    let unstable = {
+        let proxies = proxies.lock().expect("get lock: checker thread start");
+        proxies.get_unstable().clone()
+    };
+
+    let pool = ThreadPool::new(20);
+
+    for proxy in unstable {
         let proxy = proxy.clone();
         let proxies = proxies.clone();
         pool.execute(move || {
-            if verify_proxy(&proxy) {
-                info!("[success] verify proxy: {}:{}", proxy.ip(), proxy.port());
-                let mut proxies = proxies.lock().expect("get lock: insert verified");
-                // TODO: 这个地方不应该立即放入, 否则代理质量不高
-                proxies.insert_verified(proxy.clone());
+            if check_proxy(&proxy) {
+                info!("验证成功: {}:{}", proxy.ip(), proxy.port());
+                inc_failed_cnt(proxies.clone(), &proxy);
             } else {
-                info!("[failed] verify proxy: {}:{}", proxy.ip(), proxy.port());
+                info!("验证失败: {}:{}", proxy.ip(), proxy.port());
+                inc_success_cnt(proxies.clone(), &proxy);
             }
-            let mut proxies = proxies.lock().expect("get lock: remove unverified");
-            proxies.remove_unverified(&proxy);
+
+            let mut proxies = proxies.lock().expect("get lock: after stable");
+            let success = proxies.info.get(&proxy.get_key()).expect("no key").success;
+            let failed = proxies.info.get(&proxy.get_key()).expect("no key").failed;
+            if failed + success >= 4 && success > failed {
+                info!(
+                    "成功次数:{}/{}, 添加到已验证列表",
+                    success,
+                    success + failed
+                );
+                proxies.move_to_stable(&proxy);
+            } else if failed + success >= 4 && success <= failed {
+                info!(
+                    "失败次数:{}/{}, 从未验证列表移出",
+                    failed,
+                    success + failed
+                );
+                proxies.remove_unstable(&proxy);
+            }
         });
     }
     pool.join();
+}
 
-    info!("checker thread end!");
+/// 先过一遍已验证代理, 再将未验证代理验证一遍加入已验证代理
+/// 删除验证次数 >= 4 && 失败率 > 0.5 的代理
+pub fn checker_thread(proxies: AProxyPool) {
+    info!("代理验证开始");
+    check_stable(proxies.clone());
+    check_unstable(proxies);
+    info!("代理验证结束");
 }

@@ -22,7 +22,7 @@ pub struct Info {
 // 这个地方简直疯掉了, 干脆全部暴露出来让调用者自己处理
 /// 代理池
 /// O(1) 的插入时间复杂度
-/// O(1) 的随机取时间复杂度ip.to_string()
+/// O(1) 的随机取时间复杂度
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ProxyPool {
     /// 不稳定代理

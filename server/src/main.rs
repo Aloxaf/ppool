@@ -84,21 +84,19 @@ fn get_all(
 fn main() {
     env_logger::init();
 
-    let mut data_path =
-        app_dir(AppDataType::UserData, &APP_INFO, "proxy_list").expect("cannot create appdir");
+    let mut data_path = app_dir(AppDataType::UserData, &APP_INFO, "proxy_list")
+        .expect("无法创建 UserData 目录");
     data_path.push("proxies.json");
 
     debug!("data_path: {:?}", &data_path);
 
-    let proxies = {
-        if let Ok(file) = File::open(&data_path) {
-            Arc::new(Mutex::new(
-                serde_json::from_reader(file).expect("无法读取配置文件"),
-            ))
-        } else {
-            Arc::new(Mutex::new(ProxyPool::new()))
-        }
+    let save_data = if let Ok(file) = File::open(&data_path) {
+        serde_json::from_reader(file).expect("无法读取配置文件")
+    } else {
+        ProxyPool::new()
     };
+
+    let proxies = Arc::new(Mutex::new(save_data));
 
     {
         let proxies = proxies.clone();
@@ -117,9 +115,9 @@ fn main() {
             sleep(Duration::from_secs(60 * 1));
             checker_thread(proxies.clone());
             info!("写入到磁盘");
-            let data = serde_json::to_string_pretty(&proxies).unwrap();
-            let mut file = File::create(&data_path).unwrap();
-            file.write_all(data.as_bytes()).unwrap();
+            let data = serde_json::to_string_pretty(&proxies).expect("无法序列化");
+            let mut file = File::create(&data_path).expect("无法创建文件");
+            file.write_all(data.as_bytes()).expect("无法写入");
         });
     }
 

@@ -1,9 +1,9 @@
-use crate::error::MyResult;
+use crate::SpiderResult;
 use crate::utils::*;
 use crate::Proxy;
 use log::info;
 
-pub const FUNCS: [fn() -> MyResult<Vec<Proxy>>; 5] =
+pub const FUNCS: [fn() -> SpiderResult<Vec<Proxy>>; 5] =
     [get_xicidaili, get_jiangxianli, get_data5u, iphai, ip336];
 
 // TODO: 这个地方应该可以抽象成配置文件了, 函数是多余的
@@ -20,7 +20,7 @@ fn table_getter<T: AsRef<str>>(
     xpath_2: &str,
     // ip, 端口, 匿名性, 类型 所在的位置
     info_pos: [usize; 4],
-) -> MyResult<Vec<Proxy>> {
+) -> SpiderResult<Vec<Proxy>> {
     let mut ret = vec![];
     for url in url_list {
         let html = get_html(url.as_ref())?;
@@ -59,7 +59,7 @@ fn table_getter<T: AsRef<str>>(
 }
 
 /// 西刺代理 http://www.xicidaili.com
-pub fn get_xicidaili() -> MyResult<Vec<Proxy>> {
+pub fn get_xicidaili() -> SpiderResult<Vec<Proxy>> {
     let url_list = ["nn", "nt"]
         .iter()
         .map(|s| (1..=2).map(move |n| format!("https://www.xicidaili.com/{}/{}", s, n)))
@@ -77,7 +77,7 @@ pub fn get_xicidaili() -> MyResult<Vec<Proxy>> {
 
 /// ProxyIpLib 项目地址: https://github.com/jiangxianli/ProxyIpLib
 /// http://ip.jiangxianli.com
-pub fn get_jiangxianli() -> MyResult<Vec<Proxy>> {
+pub fn get_jiangxianli() -> SpiderResult<Vec<Proxy>> {
     let url_list = (1..=2)
         .map(|n| format!("http://ip.jiangxianli.com/?page={}", n))
         .collect::<Vec<_>>();
@@ -92,7 +92,7 @@ pub fn get_jiangxianli() -> MyResult<Vec<Proxy>> {
 }
 
 /// 无忧代理
-pub fn get_data5u() -> MyResult<Vec<Proxy>> {
+pub fn get_data5u() -> SpiderResult<Vec<Proxy>> {
     let url_list = [
         "http://www.data5u.com/free/gngn/index.shtml",
         "http://www.data5u.com/free/gnpt/index.shtml",
@@ -108,7 +108,7 @@ pub fn get_data5u() -> MyResult<Vec<Proxy>> {
 }
 
 /// ip 海
-pub fn iphai() -> MyResult<Vec<Proxy>> {
+pub fn iphai() -> SpiderResult<Vec<Proxy>> {
     let url_list = [
         "http://www.iphai.com/free/ng",
         "http://www.iphai.com/free/wg",
@@ -125,7 +125,7 @@ pub fn iphai() -> MyResult<Vec<Proxy>> {
 
 // TODO: 这玩意儿GBK编码, 识别不到匿名类型
 ///云代理
-pub fn ip336() -> MyResult<Vec<Proxy>> {
+pub fn ip336() -> SpiderResult<Vec<Proxy>> {
     use crate::AnonymityLevel;
     let url_list = [
         "http://www.ip3366.net/free/?stype=1",

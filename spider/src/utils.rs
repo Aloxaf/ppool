@@ -1,5 +1,5 @@
-use crate::error::*;
-use crate::Proxy;
+use crate::{Proxy, SpiderResult};
+use failure::format_err;
 use libxml::{
     parser::Parser,
     tree::{document::Document, node::Node},
@@ -12,7 +12,7 @@ use crate::user_agent;
 
 /// 获取代理
 fn get_proxy(ssl_type: &str) -> Option<reqwest::Proxy> {
-    let mut res = reqwest::get(&format!("http://localhost:8000/get?ssl_type={}&anonymity=高匿&stability=0.7", ssl_type)).unwrap();
+    let mut res = reqwest::get(&format!("http://localhost:8000/get?ssl_type={}&anonymity=高匿&stability=0.8", ssl_type)).unwrap();
     let proxy: Proxy = match serde_json::from_str(&res.text().unwrap()) {
         Ok(v) => v,
         Err(_) => return None,
@@ -25,7 +25,7 @@ fn get_proxy(ssl_type: &str) -> Option<reqwest::Proxy> {
 
 /// 获取网页
 #[cfg(not(feature = "local"))]
-pub fn get_html<S: AsRef<str>>(url: S) -> MyResult<String> {
+pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
     for i in 0..5 {
         let mut client = Client::builder().timeout(Duration::from_secs(20));
         // 第一次不使用代理
@@ -42,7 +42,7 @@ pub fn get_html<S: AsRef<str>>(url: S) -> MyResult<String> {
                 break
             }
         }
-        let client = client.build().unwrap();
+        let client = client.build()?;
         let res = client.get(url.as_ref())
             .header(header::CONNECTION, "keep-alive")
             .header(header::CACHE_CONTROL, "max-age=0")
@@ -54,20 +54,20 @@ pub fn get_html<S: AsRef<str>>(url: S) -> MyResult<String> {
             .send();
         match res {
             Ok(mut res) => if res.status().is_success() {
-                return Ok(res.text().unwrap())
+                return Ok(res.text()?)
             } else {
                 error!("get_html 错误: {}", res.status());
             },
             Err(e) => error!("get_html 错误: {:?}", e),
         }
     }
-    Err(MyError::HttpError)
+    Err(format_err!("访问 {} 失败", url.as_ref()))
 }
 
 /// 从本地加载 html
 /// 文件名为 ```url.split('.')[1]```
 #[cfg(feature = "local")]
-pub fn get_html<S: AsRef<str>>(url: S) -> MyResult<String> {
+pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
     use std::env;
     use std::fs::File;
     use std::io::Read;
@@ -86,15 +86,15 @@ pub fn get_html<S: AsRef<str>>(url: S) -> MyResult<String> {
 }
 
 /// 从 html 生成 document 和 eval_xpath 函数
-pub fn get_xpath(html: &str) -> MyResult<(Document, impl Fn(&str, &Node) -> MyResult<Vec<Node>>)> {
+pub fn get_xpath(html: &str) -> SpiderResult<(Document, impl Fn(&str, &Node) -> SpiderResult<Vec<Node>>)> {
     let parser = Parser::default_html();
-    let document = parser.parse_string(&html)?;
-    let context = Context::new(&document).map_err(|_| MyError::ContextInit)?;
+    let document = parser.parse_string(&html).map_err(|_| format_err!("无法解析 HTML"))?;
+    let context = Context::new(&document).map_err(|_|format_err!("Context 初始化失败"))?;
 
-    let eval_xpath = move |xpath: &str, node: &Node| -> MyResult<Vec<Node>> {
+    let eval_xpath = move |xpath: &str, node: &Node| -> SpiderResult<Vec<Node>> {
         let v = context
             .node_evaluate(xpath, node)
-            .map_err(|_| MyError::XPathEval)?
+            .map_err(|_| format_err!("XPath 执行失败"))?
             .get_nodes_as_vec();
         Ok(v)
     };
@@ -104,12 +104,12 @@ pub fn get_xpath(html: &str) -> MyResult<(Document, impl Fn(&str, &Node) -> MyRe
 /// 检测代理可用性
 pub fn check_proxy(proxy: &Proxy) -> bool {
     let proxy = reqwest::Proxy::https(&format!("http://{}:{}", proxy.ip(), proxy.port()))
-        .expect("fail to init proxy");
+        .expect("无法初始化代理");
     let client = Client::builder()
         .timeout(Duration::from_secs(20))
         .proxy(proxy)
         .build()
-        .expect("failed to build client");
+        .expect("无法构建 Client");
     // TODO: httpbin 在国外, 应该不能代表国内访问速度
     let res = match client.get("https://httpbin.org/ip").send() {
         Ok(r) => r,

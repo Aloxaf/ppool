@@ -789,6 +789,7 @@ version = "0.1.0"
 dependencies = [
  "app_dirs 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "ppool_spider 0.1.0",
  "rand 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",

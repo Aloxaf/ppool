@@ -1,8 +1,10 @@
-pub mod error;
 pub mod proxy_getter;
 pub mod utils;
 mod user_agent;
+use failure::Error;
 use serde::{Deserialize, Serialize};
+
+pub type SpiderResult<T> = Result<T, Error>;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum AnonymityLevel {

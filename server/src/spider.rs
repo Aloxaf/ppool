@@ -10,7 +10,7 @@ pub fn spider_thread(proxies: AProxyPool) {
             error!("{:?}", err);
             vec![]
         });
-        let mut proxies = proxies.lock().unwrap();
+        let mut proxies = proxies.lock().expect("spider_thread: 无法获取锁");
         proxies.extend_unstable(ret);
     }
     info!("代理爬取结束");

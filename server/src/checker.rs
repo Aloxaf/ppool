@@ -33,9 +33,9 @@ fn check_stable(proxies: AProxyPool) {
 
     let pool = ThreadPool::new(20);
 
-    for i in 0..stable.len() {
+    for proxy in stable {
         // TODO: 避免 clone ?
-        let proxy = stable[i].clone();
+        let proxy = proxy.clone();
         let proxies = proxies.clone();
         pool.execute(move || {
             if !check_proxy(&proxy) {
@@ -47,15 +47,14 @@ fn check_stable(proxies: AProxyPool) {
             }
 
             let mut proxies = proxies.lock().expect("get lock: after stable");
-            let success = proxies.info.get(&proxy.get_key()).expect("no key").success;
-            let failed = proxies.info.get(&proxy.get_key()).expect("no key").failed;
-            if failed > success {
+            let success = proxies.info.get(&proxy.get_key()).expect("no key").success as f32;
+            let failed = proxies.info.get(&proxy.get_key()).expect("no key").failed as f32;
+            if success / (failed + success) < 0.6 {
                 info!(
-                    "失败次数:{}/{}, 从已验证列表移出",
-                    failed,
-                    success + failed
+                    "稳定率:{:.2}, 降级为不稳定",
+                    success / (success + failed)
                 );
-                proxies.remove_stable(&proxy);
+                proxies.move_to_unstable(&proxy);
             }
         });
     }
@@ -84,21 +83,14 @@ fn check_unstable(proxies: AProxyPool) {
             }
 
             let mut proxies = proxies.lock().expect("get lock: after stable");
-            let success = proxies.info.get(&proxy.get_key()).expect("no key").success;
-            let failed = proxies.info.get(&proxy.get_key()).expect("no key").failed;
-            if failed + success >= 4 && success > failed {
-                info!(
-                    "成功次数:{}/{}, 添加到已验证列表",
-                    success,
-                    success + failed
-                );
+            let success = proxies.info.get(&proxy.get_key()).expect("no key").success as f32;
+            let failed = proxies.info.get(&proxy.get_key()).expect("no key").failed as f32;
+            let stability = success / (failed + success);
+            if failed + success >= 4.0 && stability >= 0.7 {
+                info!("稳定率:{:.2}, 标记为稳定", stability);
                 proxies.move_to_stable(&proxy);
-            } else if failed + success >= 4 && success <= failed {
-                info!(
-                    "失败次数:{}/{}, 从未验证列表移出",
-                    failed,
-                    success + failed
-                );
+            } else if failed + success >= 4.0 && stability < 0.5 {
+                info!("稳定率:{:.2}, 从列表中移出", stability);
                 proxies.remove_unstable(&proxy);
             }
         });

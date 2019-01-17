@@ -9,6 +9,7 @@ pub type AProxyPool = Arc<Mutex<ProxyPool>>;
 // TODO: 这个地方不想用 String, 额外 clone 了一次
 pub type ProxyInfo = HashMap<String, Info>;
 
+// TODO: 如何在一个稳定代理下线以后迅速剔除?
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Info {
     /// 成功验证次数
@@ -36,7 +37,7 @@ impl ProxyPool {
         Default::default()
     }
 
-    /// 插入新代理到未验证列表中
+    /// 插入新代理到不稳定列表中
     pub fn insert_unstable(&mut self, proxy: Proxy) {
         let exist = self.info.get(&proxy.get_key()).is_some();
         if !exist {
@@ -45,26 +46,32 @@ impl ProxyPool {
         }
     }
 
-    /// 移动代理到已验证列表中
+    /// 移动代理到稳定列表中
     pub fn move_to_stable(&mut self, proxy: &Proxy) {
         let proxy = self.unstable.remove_item(&proxy).unwrap();
         self.stable.push(proxy);
     }
 
-    /// 删除一个未验证代理
+    /// 移动代理到不稳定列表中
+    pub fn move_to_unstable(&mut self, proxy: &Proxy) {
+        let proxy = self.stable.remove_item(&proxy).unwrap();
+        self.unstable.push(proxy);
+    }
+
+    /// 从不稳定列表中删除一个代理
     pub fn remove_unstable(&mut self, proxy: &Proxy) {
         // 反正都用 rocket 了, unstable feature 用起来!
         self.unstable.remove_item(proxy).unwrap();
         self.info.remove(&proxy.get_key()).unwrap();
     }
 
-    /// 删除一个已验证代理
+    /// 从稳定列表中删除一个代理
     pub fn remove_stable(&mut self, proxy: &Proxy) {
         self.stable.remove_item(proxy).unwrap();
         self.info.remove(&proxy.get_key()).unwrap();
     }
 
-    /// 随机取出一个已验证代理
+    /// 从稳定列表中随机取出一个代理
     pub fn get_random(&mut self) -> &Proxy {
         let mut rng = thread_rng();
         self.stable.choose(&mut rng).unwrap()
@@ -97,7 +104,7 @@ impl ProxyPool {
             iter = iter
                 .into_iter()
                 .filter(|proxy| {
-                    let item = self.info.get(&proxy.get_key()).unwrap();
+                    let item = &self.info[&proxy.get_key()];
                     let failed = item.failed as f32;
                     let success = item.success as f32;
                     success / (success + failed) >= stability

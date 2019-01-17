@@ -8,16 +8,17 @@ use libxml::{
 use log::{debug, error};
 use reqwest::{header, Client};
 use std::time::Duration;
+use crate::user_agent;
 
 /// 获取代理
-fn get_proxy() -> Option<reqwest::Proxy> {
-    let mut res = reqwest::get("http://localhost:8000/get?ssl_type=HTTPS&anonymity=高匿&stability=0.7").unwrap();
+fn get_proxy(ssl_type: &str) -> Option<reqwest::Proxy> {
+    let mut res = reqwest::get(&format!("http://localhost:8000/get?ssl_type={}&anonymity=高匿&stability=0.7", ssl_type)).unwrap();
     let proxy: Proxy = match serde_json::from_str(&res.text().unwrap()) {
         Ok(v) => v,
         Err(_) => return None,
     };
     debug!("获取代理: {}:{}", proxy.ip(), proxy.port());
-    let proxy = reqwest::Proxy::https(&format!("http://{}:{}", proxy.ip(), proxy.port()))
+    let proxy = reqwest::Proxy::all(&format!("http://{}:{}", proxy.ip(), proxy.port()))
         .expect("build proxy error");
     Some(proxy)
 }
@@ -29,7 +30,12 @@ pub fn get_html<S: AsRef<str>>(url: S) -> MyResult<String> {
         let mut client = Client::builder().timeout(Duration::from_secs(20));
         // 第一次不使用代理
         if i > 0 {
-            if let Some(proxy) = get_proxy() {
+            let ssl_type = if url.as_ref().contains("https") {
+                "HTTPS"
+            } else {
+                "HTTP"
+            };
+            if let Some(proxy) = get_proxy(ssl_type) {
                 client = client.proxy(proxy)
             } else {
                 // 没有代理的话, 再尝试也没用了, 直接退出
@@ -41,7 +47,7 @@ pub fn get_html<S: AsRef<str>>(url: S) -> MyResult<String> {
             .header(header::CONNECTION, "keep-alive")
             .header(header::CACHE_CONTROL, "max-age=0")
             .header(header::UPGRADE_INSECURE_REQUESTS, "1")
-            .header(header::USER_AGENT, "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.94 Safari/537.36")
+            .header(header::USER_AGENT, user_agent::random())
             .header(header::ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
             .header(header::ACCEPT_ENCODING, "gzip, deflate, sdch")
             .header(header::ACCEPT_LANGUAGE, "zh-CN,zh;q=0.8")

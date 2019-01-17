@@ -7,9 +7,6 @@ use ppool_spider::proxy_getter::*;
 fn test_xici() {
     let proxies = get_xicidaili().unwrap();
     assert!(proxies.len() > 0);
-    assert_ne!(proxies[0].ip(), "");
-    assert_ne!(proxies[0].anonymous(), "");
-    assert_ne!(proxies[0].ssl(), "");
     println!("{}", proxies.len());
     println!("{:#?}", proxies[0]);
 }
@@ -18,9 +15,6 @@ fn test_xici() {
 fn test_jiangxianli() {
     let proxies = get_jiangxianli().unwrap();
     assert!(proxies.len() > 0);
-    assert_ne!(proxies[0].ip(), "");
-    assert_ne!(proxies[0].anonymous(), "");
-    assert_ne!(proxies[0].ssl(), "");
     println!("{}", proxies.len());
     println!("{:#?}", proxies[0]);
 }

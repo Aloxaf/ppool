@@ -1,6 +1,7 @@
 pub mod error;
 pub mod proxy_getter;
 pub mod utils;
+mod user_agent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
@@ -12,11 +13,14 @@ pub enum AnonymityLevel {
 
 impl<T: Sized + AsRef<str>> From<T> for AnonymityLevel {
     fn from(s: T) -> Self {
-        match s.as_ref() {
-            "高匿" => AnonymityLevel::Elite,
-            "匿名" => AnonymityLevel::Anonymous,
+        let s = s.as_ref();
+        if s.contains("高") {
+            AnonymityLevel::Elite
+        } else if s.contains("普") {
+            AnonymityLevel::Anonymous
+        } else {
             // 默认透明
-            _ => AnonymityLevel::Transparent,
+            AnonymityLevel::Transparent
         }
     }
 }
@@ -29,10 +33,12 @@ pub enum SslType {
 
 impl <T: Sized + AsRef<str>> From<T> for SslType {
     fn from(s: T) -> Self {
-        match s.as_ref() {
-            "HTTPS" | "https" => SslType::HTTPS,
+        let s = s.as_ref();
+        if s.contains("HTTPS") || s.contains("https") {
+            SslType::HTTPS
+        } else {
             // 默认 HTTP
-            _ => SslType::HTTP,
+            SslType::HTTP
         }
     }
 }

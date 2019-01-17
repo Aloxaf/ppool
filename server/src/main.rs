@@ -50,7 +50,7 @@ fn get_single(
     stability: Option<f32>,
 ) -> String {
     let mut proxies = state.lock().unwrap();
-    if proxies.get_stable().len() == 0 {
+    if proxies.get_stable().is_empty() {
         "[]".to_string()
     } else if ssl_type.is_none() && anonymity.is_none() && stability.is_none() {
         let proxy = proxies.get_random();
@@ -110,13 +110,13 @@ fn main() {
         let data_path = data_path.clone();
         let proxies = proxies.clone();
         thread::spawn(move || loop {
+            info!("等待2分钟开始验证...");
+            sleep(Duration::from_secs(60 * 2));
             checker_thread(proxies.clone());
             info!("写入到磁盘");
             let data = serde_json::to_string_pretty(&proxies).unwrap();
             let mut file = File::create(&data_path).unwrap();
-            file.write(data.as_bytes()).unwrap();
-            info!("等待2分钟再次验证...");
-            sleep(Duration::from_secs(60 * 2));
+            file.write_all(data.as_bytes()).unwrap();
         });
     }
 

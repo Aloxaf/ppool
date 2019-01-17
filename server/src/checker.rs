@@ -6,23 +6,19 @@ use threadpool::ThreadPool;
 
 fn inc_failed_cnt(proxies: AProxyPool, proxy: &Proxy) {
     let mut proxies = proxies.lock().expect("inc failed");
-    proxies
-        .info
-        .get_mut(&proxy.get_key())
-        .expect("no key")
-        .failed += 1;
+    let mut info = proxies.info.get_mut(&proxy.get_key()).expect("no key");
+    info.failed += 1;
+    info.seq += 1;
 }
 
 fn inc_success_cnt(proxies: AProxyPool, proxy: &Proxy) {
     let mut proxies = proxies.lock().expect("inc success");
-    proxies
-        .info
-        .get_mut(&proxy.get_key())
-        .expect("no key")
-        .success += 1;
+    let mut info = proxies.info.get_mut(&proxy.get_key()).expect("no key");
+    info.success += 1;
+    info.seq = 0;
 }
 
-// 验证已验证代理
+// 检查稳定代理
 fn check_stable(proxies: AProxyPool) {
     // TODO: 避免 clone ?
     // 为了避免验证代理时造成阻塞, 先 clone 一遍
@@ -31,7 +27,7 @@ fn check_stable(proxies: AProxyPool) {
         proxies.get_stable().clone()
     };
 
-    let pool = ThreadPool::new(20);
+    let pool = ThreadPool::new(25);
 
     for proxy in stable {
         // TODO: 避免 clone ?
@@ -47,13 +43,17 @@ fn check_stable(proxies: AProxyPool) {
             }
 
             let mut proxies = proxies.lock().expect("get lock: after stable");
-            let success = proxies.info.get(&proxy.get_key()).expect("no key").success as f32;
-            let failed = proxies.info.get(&proxy.get_key()).expect("no key").failed as f32;
-            if success / (failed + success) < 0.6 {
+            let info = proxies.info.get(&proxy.get_key()).expect("no key");
+            let success = info.success as f32;
+            let failed = info.failed as f32;
+            if success / (failed + success) < 0.7 {
                 info!(
                     "稳定率:{:.2}, 降级为不稳定",
                     success / (success + failed)
                 );
+                proxies.move_to_unstable(&proxy);
+            } else if info.seq >= 4 {
+                info!("连续验证失败4次, 降级为不稳定");
                 proxies.move_to_unstable(&proxy);
             }
         });
@@ -61,14 +61,14 @@ fn check_stable(proxies: AProxyPool) {
     pool.join();
 }
 
-// 验证未验证代理
+// 检查不稳定代理
 fn check_unstable(proxies: AProxyPool) {
     let unstable = {
         let proxies = proxies.lock().expect("get lock: checker thread start");
         proxies.get_unstable().clone()
     };
 
-    let pool = ThreadPool::new(20);
+    let pool = ThreadPool::new(25);
 
     for proxy in unstable {
         let proxy = proxy.clone();
@@ -83,14 +83,18 @@ fn check_unstable(proxies: AProxyPool) {
             }
 
             let mut proxies = proxies.lock().expect("get lock: after stable");
-            let success = proxies.info.get(&proxy.get_key()).expect("no key").success as f32;
-            let failed = proxies.info.get(&proxy.get_key()).expect("no key").failed as f32;
+            let info = proxies.info.get(&proxy.get_key()).expect("no key");
+            let success = info.success as f32;
+            let failed = info.failed as f32;
             let stability = success / (failed + success);
-            if failed + success >= 4.0 && stability >= 0.7 {
+            if failed + success >= 5.0 && stability >= 0.7 {
                 info!("稳定率:{:.2}, 标记为稳定", stability);
                 proxies.move_to_stable(&proxy);
-            } else if failed + success >= 4.0 && stability < 0.5 {
+            } else if failed + success >= 5.0 && stability < 0.6 {
                 info!("稳定率:{:.2}, 从列表中移出", stability);
+                proxies.remove_unstable(&proxy);
+            } else if info.seq >= 6 {
+                info!("连续验证失败4次, 从列表中移出");
                 proxies.remove_unstable(&proxy);
             }
         });
@@ -98,8 +102,7 @@ fn check_unstable(proxies: AProxyPool) {
     pool.join();
 }
 
-/// 先过一遍已验证代理, 再将未验证代理验证一遍加入已验证代理
-/// 删除验证次数 >= 4 && 失败率 > 0.5 的代理
+/// 代理稳定性检查线程
 pub fn checker_thread(proxies: AProxyPool) {
     info!("代理验证开始");
     check_stable(proxies.clone());

@@ -78,6 +78,9 @@ fn get_all(
     }
 }
 
+// TODO: del api
+// 其实并不想增加这个 API, 感觉没啥用...
+
 fn main() {
     env_logger::init();
 
@@ -101,8 +104,8 @@ fn main() {
         let proxies = proxies.clone();
         thread::spawn(move || loop {
             spider_thread(proxies.clone());
-            info!("等待10分钟再次爬取...");
-            sleep(Duration::from_secs(60 * 10));
+            info!("等待20分钟再次爬取...");
+            sleep(Duration::from_secs(60 * 20));
         });
     }
 
@@ -110,8 +113,8 @@ fn main() {
         let data_path = data_path.clone();
         let proxies = proxies.clone();
         thread::spawn(move || loop {
-            info!("等待2分钟开始验证...");
-            sleep(Duration::from_secs(60 * 2));
+            info!("等待1分钟开始验证...");
+            sleep(Duration::from_secs(60 * 1));
             checker_thread(proxies.clone());
             info!("写入到磁盘");
             let data = serde_json::to_string_pretty(&proxies).unwrap();

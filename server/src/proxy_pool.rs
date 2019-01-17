@@ -9,13 +9,14 @@ pub type AProxyPool = Arc<Mutex<ProxyPool>>;
 // TODO: 这个地方不想用 String, 额外 clone 了一次
 pub type ProxyInfo = HashMap<String, Info>;
 
-// TODO: 如何在一个稳定代理下线以后迅速剔除?
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Info {
     /// 成功验证次数
     pub success: u32,
     /// 失败验证次数
     pub failed: u32,
+    /// 连续失败次数
+    pub seq: u8,
 }
 
 // 这个地方简直疯掉了, 干脆全部暴露出来让调用者自己处理

@@ -1,6 +1,3 @@
-pub mod proxy_getter;
-pub mod utils;
-mod user_agent;
 use failure::Error;
 use serde::{Deserialize, Serialize};
 
@@ -37,7 +34,7 @@ pub enum SslType {
     HTTPS,
 }
 
-impl <T: Sized + AsRef<str>> From<T> for SslType {
+impl<T: Sized + AsRef<str>> From<T> for SslType {
     fn from(s: T) -> Self {
         let s = s.as_ref();
         if s.contains("HTTPS") || s.contains("https") {

@@ -1,9 +1,11 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 use app_dirs::*;
-use clap::{App, load_yaml};
+use clap::{load_yaml, App};
 use log::{debug, info};
-use ppool_server::{checker::checker_thread, spider::spider_thread, AProxyPool, ProxyPool};
+use ppool::checker::checker_thread;
+use ppool::proxy_pool::*;
+use ppool::spider_thread::spider_thread;
 use rocket::{get, routes, State};
 use std::fs::File;
 use std::io::prelude::*;

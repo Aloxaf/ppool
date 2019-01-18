@@ -1,7 +1,7 @@
+use super::spider::proxy::Proxy;
+use super::spider::utils::check_proxy;
 use crate::AProxyPool;
 use log::info;
-use ppool_spider::utils::check_proxy;
-use ppool_spider::Proxy;
 use threadpool::ThreadPool;
 
 // TODO: 这个地方频繁上锁是否会影响并发性能

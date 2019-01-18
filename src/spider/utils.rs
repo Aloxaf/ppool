@@ -1,4 +1,5 @@
-use crate::{Proxy, SpiderResult, SslType};
+use super::proxy::*;
+use super::user_agent;
 use failure::format_err;
 use libxml::{
     parser::Parser,
@@ -8,11 +9,14 @@ use libxml::{
 use log::{debug, error};
 use reqwest::{header, Client};
 use std::time::Duration;
-use crate::user_agent;
 
 /// 获取代理
 fn get_proxy(ssl_type: &str) -> Option<reqwest::Proxy> {
-    let mut res = reqwest::get(&format!("http://localhost:8000/get?ssl_type={}&anonymity=高匿", ssl_type)).unwrap();
+    let mut res = reqwest::get(&format!(
+        "http://localhost:8000/get?ssl_type={}&anonymity=高匿",
+        ssl_type
+    ))
+    .unwrap();
     let proxy: Proxy = match serde_json::from_str(&res.text().unwrap()) {
         Ok(v) => v,
         Err(_) => return None,
@@ -39,25 +43,31 @@ pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
                 client = client.proxy(proxy)
             } else {
                 // 没有代理的话, 再尝试也没用了, 直接退出
-                break
+                break;
             }
         }
         let client = client.build()?;
-        let res = client.get(url.as_ref())
+        let res = client
+            .get(url.as_ref())
             .header(header::CONNECTION, "keep-alive")
             .header(header::CACHE_CONTROL, "max-age=0")
             .header(header::UPGRADE_INSECURE_REQUESTS, "1")
             .header(header::USER_AGENT, user_agent::random())
-            .header(header::ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+            .header(
+                header::ACCEPT,
+                "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            )
             .header(header::ACCEPT_ENCODING, "gzip, deflate, sdch")
             .header(header::ACCEPT_LANGUAGE, "zh-CN,zh;q=0.8")
             .send();
         match res {
-            Ok(mut res) => if res.status().is_success() {
-                return Ok(res.text()?)
-            } else {
-                error!("get_html: {}", res.status());
-            },
+            Ok(mut res) => {
+                if res.status().is_success() {
+                    return Ok(res.text()?);
+                } else {
+                    error!("get_html: {}", res.status());
+                }
+            }
             Err(e) => error!("get_html: {:?}", e),
         }
     }
@@ -86,10 +96,14 @@ pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
 }
 
 /// 从 html 生成 document 和 eval_xpath 函数
-pub fn get_xpath(html: &str) -> SpiderResult<(Document, impl Fn(&str, &Node) -> SpiderResult<Vec<Node>>)> {
+pub fn get_xpath(
+    html: &str,
+) -> SpiderResult<(Document, impl Fn(&str, &Node) -> SpiderResult<Vec<Node>>)> {
     let parser = Parser::default_html();
-    let document = parser.parse_string(&html).map_err(|_| format_err!("无法解析 HTML"))?;
-    let context = Context::new(&document).map_err(|_|format_err!("Context 初始化失败"))?;
+    let document = parser
+        .parse_string(&html)
+        .map_err(|_| format_err!("无法解析 HTML"))?;
+    let context = Context::new(&document).map_err(|_| format_err!("Context 初始化失败"))?;
 
     let eval_xpath = move |xpath: &str, node: &Node| -> SpiderResult<Vec<Node>> {
         let v = context
@@ -103,7 +117,7 @@ pub fn get_xpath(html: &str) -> SpiderResult<(Document, impl Fn(&str, &Node) -> 
 
 /// 检测代理可用性
 pub fn check_proxy(proxy: &Proxy) -> bool {
-    let ssl_type = proxy.ssl_type;
+    let ssl_type = proxy.ssl_type();
     let proxy = reqwest::Proxy::all(&format!("http://{}:{}", proxy.ip(), proxy.port()))
         .expect("无法初始化代理");
     let client = Client::builder()

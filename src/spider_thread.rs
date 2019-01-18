@@ -1,6 +1,6 @@
+use super::spider::proxy_getter::FUNCS;
 use crate::AProxyPool;
 use log::{error, info};
-use ppool_spider::proxy_getter::FUNCS;
 
 /// 爬虫线程
 pub fn spider_thread(proxies: AProxyPool) {

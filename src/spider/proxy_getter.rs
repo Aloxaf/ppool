@@ -1,10 +1,9 @@
-use crate::SpiderResult;
-use crate::utils::*;
-use crate::Proxy;
+use super::proxy::*;
+use super::utils::*;
 use log::info;
 
-pub const FUNCS: [fn() -> SpiderResult<Vec<Proxy>>; 5] =
-    [get_xicidaili, get_jiangxianli, get_data5u, iphai, ip336];
+pub const FUNCS: [fn() -> SpiderResult<Vec<Proxy>>; 4] =
+    [get_xicidaili, get_jiangxianli, get_data5u, iphai];
 
 // TODO: 这个地方应该可以抽象成配置文件了, 函数是多余的
 
@@ -124,22 +123,22 @@ pub fn iphai() -> SpiderResult<Vec<Proxy>> {
 }
 
 // TODO: 这玩意儿GBK编码, 识别不到匿名类型
-///云代理
-pub fn ip336() -> SpiderResult<Vec<Proxy>> {
-    use crate::AnonymityLevel;
-    let url_list = [
-        "http://www.ip3366.net/free/?stype=1",
-        // "http://www.ip3366.net/free/?stype=2",
-    ];
-    let mut ret = table_getter(
-        &url_list,
-        "云代理",
-".//table//tr[position()>1]",
-        "./td/text()",
-        [0, 1, 2, 3],
-    )?;
-    for proxy in &mut ret {
-        proxy.anonymity = AnonymityLevel::Elite;
-    }
-    Ok(ret)
-}
+//云代理
+//pub fn ip336() -> SpiderResult<Vec<Proxy>> {
+//    use super::proxy::AnonymityLevel;
+//    let url_list = [
+//        "http://www.ip3366.net/free/?stype=1",
+//        // "http://www.ip3366.net/free/?stype=2",
+//    ];
+//    let mut ret = table_getter(
+//        &url_list,
+//        "云代理",
+//        ".//table//tr[position()>1]",
+//        "./td/text()",
+//        [0, 1, 2, 3],
+//    )?;
+//    for proxy in &mut ret {
+//        proxy.anonymity = AnonymityLevel::Elite;
+//    }
+//    Ok(ret)
+//}

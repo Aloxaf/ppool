@@ -1,4 +1,4 @@
-use ppool_spider::{AnonymityLevel, Proxy, SslType};
+use super::spider::proxy::*;
 use rand::{seq::SliceRandom, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

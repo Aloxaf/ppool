@@ -13,7 +13,7 @@ cargo install --git https://github.com/Aloxaf/ppool
 ## 运行
 
 ```bash
-ppool
+RUST_LOG=ppool_server=debug,ppool_spider=debug ROCKET_PORT=8000 ppool
 ```
 
 ## 优点
@@ -38,6 +38,7 @@ ppool
 - [x] 更完善的错误处理(现在到处都是unwrap)
 - [x] 更完善的接口(能够根据需求预筛选)
 - [ ] 更少 clone (更高性能)
+- [ ] 更少 lock (lock-free?? evmap? crossbeam? tokio? mio?)
 - [ ] 异步 (其实没用过, 只是先放在这里 
 - [x] 通过代理爬取代理
 - [ ] 通过配置文件定义一些简单的爬虫

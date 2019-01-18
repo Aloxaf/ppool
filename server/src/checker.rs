@@ -59,8 +59,8 @@ fn check_stable(proxies: AProxyPool) {
                     success / (success + failed)
                 );
                 proxies.move_to_unstable(&proxy);
-            } else if info.seq >= 3 {
-                info!("连续验证失败3次, 降级为不稳定");
+            } else if info.seq >= 2 {
+                info!("连续验证失败2次, 降级为不稳定");
                 proxies.move_to_unstable(&proxy);
             }
         });
@@ -100,8 +100,8 @@ fn check_unstable(proxies: AProxyPool) {
             } else if failed + success >= 5.0 && stability < 0.65 {
                 info!("稳定率:{:.2}, 从列表中移出", stability);
                 proxies.remove_unstable(&proxy);
-            } else if info.seq >= 4 {
-                info!("连续验证失败4次, 从列表中移出");
+            } else if info.seq >= 3 {
+                info!("连续验证失败3次, 从列表中移出");
                 proxies.remove_unstable(&proxy);
             }
         });

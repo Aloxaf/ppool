@@ -6,10 +6,14 @@ use serde::{Deserialize, Serialize};
 
 pub type SpiderResult<T> = Result<T, Error>;
 
+/// 匿名程度
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum AnonymityLevel {
+    /// 透明
     Transparent,
+    /// 匿名
     Anonymous,
+    /// 高匿
     Elite,
 }
 

@@ -4,8 +4,13 @@ version = "0.1.0"
 authors = ["Aloxaf <aloxafx@gmail.com>"]
 edition = "2018"
 
+[[bin]]
+name = "ppool"
+path = "src/main.rs"
+
 [dependencies]
 app_dirs = "^1.2.1"
+clap = { version = "2.32", features = ["yaml"] }
 env_logger = "0.6"
 failure = "0.1.5"
 log = "0.4"

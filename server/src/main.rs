@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 use app_dirs::*;
+use clap::{App, load_yaml};
 use log::{debug, info};
 use ppool_server::{checker::checker_thread, spider::spider_thread, AProxyPool, ProxyPool};
 use rocket::{get, routes, State};
@@ -85,8 +86,13 @@ fn get_all(
 // TODO: del api
 // 其实并不想增加这个 API, 感觉没啥用...
 
+// TODO: reload api
+// 修改配置文件后不用 kill 进程
+
 fn main() {
     env_logger::init();
+
+    let _matches = App::from_yaml(load_yaml!("cli.yml")).get_matches();
 
     let mut data_path = app_dir(AppDataType::UserData, &APP_INFO, "proxy_list")
         .expect("无法创建 UserData 目录");

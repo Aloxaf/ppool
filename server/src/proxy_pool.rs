@@ -120,11 +120,11 @@ impl ProxyPool {
         ssl_type: Option<String>,
         anonymity: Option<String>,
         stability: Option<f32>,
-    ) -> &Proxy {
+    ) -> Option<&Proxy> {
         let mut rng = thread_rng();
         self.select(ssl_type, anonymity, stability)
             .choose(&mut rng)
-            .unwrap()
+            .map(|proxy| *proxy)
     }
 
     /// 获取未验证代理的引用

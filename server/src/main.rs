@@ -57,7 +57,11 @@ fn get_single(
         serde_json::to_string_pretty(proxy).unwrap()
     } else {
         let proxy = proxies.select_random(ssl_type, anonymity, stability);
-        serde_json::to_string_pretty(proxy).unwrap()
+        if let Some(proxy) = proxy {
+            serde_json::to_string_pretty(proxy).unwrap()
+        } else {
+            "null".to_owned()
+        }
     }
 }
 

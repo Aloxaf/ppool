@@ -1,4 +1,4 @@
-use crate::{Proxy, SpiderResult};
+use crate::{Proxy, SpiderResult, SslType};
 use failure::format_err;
 use libxml::{
     parser::Parser,
@@ -12,7 +12,7 @@ use crate::user_agent;
 
 /// 获取代理
 fn get_proxy(ssl_type: &str) -> Option<reqwest::Proxy> {
-    let mut res = reqwest::get(&format!("http://localhost:8000/get?ssl_type={}&anonymity=高匿&stability=0.8", ssl_type)).unwrap();
+    let mut res = reqwest::get(&format!("http://localhost:8000/get?ssl_type={}&anonymity=高匿", ssl_type)).unwrap();
     let proxy: Proxy = match serde_json::from_str(&res.text().unwrap()) {
         Ok(v) => v,
         Err(_) => return None,
@@ -56,9 +56,9 @@ pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
             Ok(mut res) => if res.status().is_success() {
                 return Ok(res.text()?)
             } else {
-                error!("get_html 错误: {}", res.status());
+                error!("get_html: {}", res.status());
             },
-            Err(e) => error!("get_html 错误: {:?}", e),
+            Err(e) => error!("get_html: {:?}", e),
         }
     }
     Err(format_err!("访问 {} 失败", url.as_ref()))
@@ -103,17 +103,21 @@ pub fn get_xpath(html: &str) -> SpiderResult<(Document, impl Fn(&str, &Node) -> 
 
 /// 检测代理可用性
 pub fn check_proxy(proxy: &Proxy) -> bool {
-    let proxy = reqwest::Proxy::https(&format!("http://{}:{}", proxy.ip(), proxy.port()))
+    let ssl_type = proxy.ssl_type;
+    let proxy = reqwest::Proxy::all(&format!("http://{}:{}", proxy.ip(), proxy.port()))
         .expect("无法初始化代理");
     let client = Client::builder()
         .timeout(Duration::from_secs(20))
         .proxy(proxy)
         .build()
         .expect("无法构建 Client");
-    // TODO: httpbin 在国外, 应该不能代表国内访问速度
-    let res = match client.get("https://httpbin.org/ip").send() {
-        Ok(r) => r,
-        Err(_) => return false,
+    // httpbin 在国外, 应该不能代表国内访问速度
+    let res = match ssl_type {
+        SslType::HTTPS => client.head("https://www.baidu.com/").send(),
+        SslType::HTTP => client.head("http://www.baidu.com/").send(),
     };
-    res.status().is_success()
+    match res {
+        Ok(r) => r.status().is_success(),
+        Err(_e) => false,
+    }
 }

@@ -4,6 +4,7 @@ use ppool_spider::utils::check_proxy;
 use ppool_spider::Proxy;
 use threadpool::ThreadPool;
 
+// TODO: 这个地方频繁上锁是否会影响并发性能
 fn inc_failed_cnt(proxies: AProxyPool, proxy: &Proxy) {
     let mut proxies = proxies.lock().expect("inc_failed_cnt: 无法获取锁");
     let mut info = proxies
@@ -33,7 +34,7 @@ fn check_stable(proxies: AProxyPool) {
         proxies.get_stable().clone()
     };
 
-    let pool = ThreadPool::new(25);
+    let pool = ThreadPool::new(30);
 
     for proxy in stable {
         // TODO: 避免 clone ?
@@ -99,8 +100,8 @@ fn check_unstable(proxies: AProxyPool) {
             } else if failed + success >= 5.0 && stability < 0.65 {
                 info!("稳定率:{:.2}, 从列表中移出", stability);
                 proxies.remove_unstable(&proxy);
-            } else if info.seq >= 5 {
-                info!("连续验证失败5次, 从列表中移出");
+            } else if info.seq >= 4 {
+                info!("连续验证失败4次, 从列表中移出");
                 proxies.remove_unstable(&proxy);
             }
         });

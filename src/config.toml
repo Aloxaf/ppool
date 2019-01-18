@@ -1,0 +1,98 @@
+# 验证线程配置
+[checker]
+# 最大工作线程数量
+max_workers = 20
+# 验证间隔/secs
+interval = 60
+# 进行HTTP验证的URL
+url_http = "http://www.baidu.com"
+# 进行HTTPS验证的URL
+url_https = "https://www.baidu.com"
+# 验证时允许的最大超时时间
+timeout = 20
+# 进入稳定列表所需最少验证次数
+min_check_cnt = 10
+
+# 对连续失败次数的配置
+[checker.fail_times]
+# 降级所需
+level_down = 2
+# 移除所需
+remove = 3
+
+# 对稳定率的配置
+[checker.stability]
+# 升级所需
+level_up = 0.75
+# 降级所需
+level_down = 0.75
+# 移除所需
+remove = 0.7
+
+# 爬虫线程配置
+[spider]
+# 两轮间隔
+interval = 1200
+
+# 针对普通表格类网站的爬虫规则
+[[spider.common_table]]
+# 是否启用
+enable = true
+# log里的名称
+name = "西刺代理"
+# 爬取的 URL
+urls = [
+"https://www.xicidaili.com/nn/1",
+"https://www.xicidaili.com/nn/2"
+]
+# 取出所在行的 XPATH
+xpath_line = ".//table[@id=\"ip_list\"]//tr[position()>1]"
+# 取出所在列的 XPATH
+xpath_col = "./td[not(*)]/text()"
+# 所需信息的在列中的下标(从 0 开始)
+info_index = [0, 1, 2, 3]
+
+[[spider.common_table]]
+enable = true
+name = "ProxyIpLib"
+urls = [
+"http://ip.jiangxianli.com/?page=1",
+"http://ip.jiangxianli.com/?page=2"
+]
+xpath_line = ".//table//tr[position()>1]"
+xpath_col = "./td/text()"
+info_index = [1, 2, 3, 4]
+
+[[spider.common_table]]
+enable = true
+name = "无忧代理"
+urls = [
+"http://www.data5u.com/free/gngn/index.shtml"
+]
+xpath_line = "//ul[@class=\"l2\"]"
+xpath_col = ".//li/text()"
+info_index = [0, 1, 2, 3]
+
+[[spider.common_table]]
+enable = true
+name = "IP海"
+urls = [
+"http://www.iphai.com/free/ng"
+]
+xpath_line = ".//table//tr[position()>1]"
+xpath_col = "./td/text()"
+info_index = [0, 1, 2, 3]
+
+# 使用正则提取
+# 因为需要记录多个字段, 所以写起来感觉麻烦地1B
+[[spider.common_regex]]
+enable = false
+name = "演示"
+urls = [
+"http://www.example.com"
+]
+# 这个地方只获取第一个匹配
+ip = "<td>(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})</td>"
+port = ""
+anonymity = ""
+ssl_type = ""

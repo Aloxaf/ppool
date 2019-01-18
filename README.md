@@ -13,8 +13,10 @@ cargo install --git https://github.com/Aloxaf/ppool
 ## 运行
 
 ```bash
-RUST_LOG=ppool_server=debug,ppool_spider=debug ROCKET_PORT=8000 ppool
+RUST_LOG=ppool=debug ppool
 ```
+
+注: 可通过环境变量 `ROCKET_PORT` 来控制端口
 
 ## 优点
 
@@ -32,14 +34,15 @@ RUST_LOG=ppool_server=debug,ppool_spider=debug ROCKET_PORT=8000 ppool
 - [x] 记录进度
 - [ ] 更多代理
 - [ ] 更多注释
-- [ ] 更多参数 / 配置文件
+- [x] 更多参数 / 配置文件
 - [x] 更多代理的信息 <s>(响应速度?)</s>
 - [x] 更多线程
 - [x] 更完善的错误处理(现在到处都是unwrap)
 - [x] 更完善的接口(能够根据需求预筛选)
 - [ ] 更少 clone (更高性能)
 - [ ] 更少 lock (lock-free?? evmap? crossbeam? tokio? mio?)
+- [ ] 更好看的变量名 (
+- [ ] 更方便地修改配置 (reload api)
 - [ ] 异步 (其实没用过, 只是先放在这里 
 - [x] 通过代理爬取代理
-- [ ] 通过配置文件定义一些简单的爬虫
-- [ ] 在配置文件中引入 js 之类的语言以支持复杂语法? <s>(引入 Python)</s>
+- [x] 通过配置文件定义一些简单的爬虫

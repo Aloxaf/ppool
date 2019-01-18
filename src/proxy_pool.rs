@@ -16,7 +16,7 @@ pub struct Info {
     /// 失败验证次数
     pub failed: u32,
     /// 连续失败次数
-    pub seq: u8,
+    pub fail_times: u8,
 }
 
 // 这个地方简直疯掉了, 干脆全部暴露出来让调用者自己处理
@@ -124,7 +124,7 @@ impl ProxyPool {
         let mut rng = thread_rng();
         self.select(ssl_type, anonymity, stability)
             .choose(&mut rng)
-            .map(|proxy| *proxy)
+            .cloned()
     }
 
     /// 获取未验证代理的引用

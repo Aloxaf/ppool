@@ -1,5 +1,5 @@
 mod user_agent;
 
+pub mod getter;
 pub mod proxy;
-pub mod proxy_getter;
 pub mod utils;

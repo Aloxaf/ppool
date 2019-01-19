@@ -7,30 +7,24 @@ use libxml::{
     tree::{document::Document, node::Node},
     xpath::Context,
 };
-use log::{debug, error};
+use log::*;
 use reqwest::{header, Client};
 use std::sync::Arc;
 use std::time::Duration;
 
 /// 获取代理
-fn get_proxy(ssl_type: &str) -> Option<reqwest::Proxy> {
+fn get_proxy(ssl_type: &str) -> SpiderResult<reqwest::Proxy> {
     let mut res = reqwest::get(&format!(
         "http://localhost:8000/get?ssl_type={}&anonymity=高匿",
         ssl_type
-    ))
-    .unwrap();
-    let proxy: Proxy = match serde_json::from_str(&res.text().unwrap()) {
-        Ok(v) => v,
-        Err(_) => return None,
-    };
-    debug!("获取代理: {}:{}", proxy.ip(), proxy.port());
-    let proxy = reqwest::Proxy::all(&format!("http://{}:{}", proxy.ip(), proxy.port()))
-        .expect("build proxy error");
-    Some(proxy)
+    ))?;
+    let proxy: Proxy = serde_json::from_str(&res.text()?)?;
+    info!("获取代理: {}:{}", proxy.ip(), proxy.port());
+    let proxy = reqwest::Proxy::all(&format!("http://{}:{}", proxy.ip(), proxy.port())).unwrap();
+    Ok(proxy)
 }
 
 /// 获取网页
-#[cfg(not(feature = "local"))]
 pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
     for i in 0..5 {
         let mut client = Client::builder().timeout(Duration::from_secs(20));
@@ -41,11 +35,9 @@ pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
             } else {
                 "HTTP"
             };
-            if let Some(proxy) = get_proxy(ssl_type) {
-                client = client.proxy(proxy)
-            } else {
-                // 没有代理的话, 再尝试也没用了, 直接退出
-                break;
+            match get_proxy(ssl_type) {
+                Ok(proxy) => client = client.proxy(proxy),
+                Err(err) => error!("获取代理失败: {:?}", err),
             }
         }
         let client = client.build()?;
@@ -70,31 +62,10 @@ pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
                     error!("get_html: {}", res.status());
                 }
             }
-            Err(e) => error!("get_html: {:?}", e),
+            Err(err) => error!("get_html: {:?}", err),
         }
     }
     Err(format_err!("访问 {} 失败", url.as_ref()))
-}
-
-/// 从本地加载 html
-/// 文件名为 ```url.split('.')[1]```
-#[cfg(feature = "local")]
-pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
-    use std::env;
-    use std::fs::File;
-    use std::io::Read;
-
-    let mut self_path = env::current_dir().unwrap();
-    self_path.pop();
-    self_path.extend(&["spider", "tests", "html"]);
-
-    let name = url.as_ref().split('.').skip(1).next().unwrap();
-    self_path.push(format!("{}.html", name));
-    debug!("读取本地文件 {:?}", self_path);
-    let mut file = File::open(self_path).unwrap();
-    let mut ret = String::new();
-    file.read_to_string(&mut ret).unwrap();
-    Ok(ret)
 }
 
 /// 从 html 生成 document 和 eval_xpath 函数
@@ -118,10 +89,10 @@ pub fn get_xpath(
 }
 
 /// 检测代理可用性
+#[inline]
 pub fn check_proxy(proxy: &Proxy, config: Arc<CheckerConfig>) -> bool {
     let ssl_type = proxy.ssl_type();
-    let proxy = reqwest::Proxy::all(&format!("http://{}:{}", proxy.ip(), proxy.port()))
-        .expect("无法初始化代理");
+    let proxy = reqwest::Proxy::all(&format!("http://{}:{}", proxy.ip(), proxy.port())).unwrap();
     let client = Client::builder()
         .timeout(Duration::from_secs(config.timeout))
         .proxy(proxy)

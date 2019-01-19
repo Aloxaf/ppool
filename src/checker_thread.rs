@@ -7,6 +7,7 @@ use std::sync::Arc;
 use threadpool::ThreadPool;
 
 // TODO: 这个地方频繁上锁是否会影响并发性能
+#[inline]
 fn inc_failed_cnt(proxies: AProxyPool, proxy: &Proxy) {
     let mut proxies = proxies.lock().expect("inc_failed_cnt: 无法获取锁");
     let mut info = proxies
@@ -17,6 +18,7 @@ fn inc_failed_cnt(proxies: AProxyPool, proxy: &Proxy) {
     info.fail_times += 1;
 }
 
+#[inline]
 fn inc_success_cnt(proxies: AProxyPool, proxy: &Proxy) {
     let mut proxies = proxies.lock().expect("inc_success_cnt: 无法获取锁");
     let mut info = proxies
@@ -29,8 +31,6 @@ fn inc_success_cnt(proxies: AProxyPool, proxy: &Proxy) {
 
 // 检查稳定代理
 fn check_stable(proxies: AProxyPool, checker_config: Arc<CheckerConfig>) {
-    let stability_level_down = checker_config.stability.level_down;
-    let fail_times_level_down = checker_config.fail_times.level_down;
     // TODO: 避免 clone ?
     // 为了避免验证代理时造成阻塞, 先 clone 一遍
     let stable = {
@@ -45,8 +45,9 @@ fn check_stable(proxies: AProxyPool, checker_config: Arc<CheckerConfig>) {
         let proxy = proxy.clone();
         let proxies = proxies.clone();
         let checker_config = checker_config.clone();
+
         pool.execute(move || {
-            if !check_proxy(&proxy, checker_config) {
+            if !check_proxy(&proxy, checker_config.clone()) {
                 info!("验证成功: {}:{}", proxy.ip(), proxy.port());
                 inc_failed_cnt(proxies.clone(), &proxy);
             } else {
@@ -58,14 +59,18 @@ fn check_stable(proxies: AProxyPool, checker_config: Arc<CheckerConfig>) {
             let info = proxies.info.get(&proxy.get_key()).expect("查无此键");
             let success = info.success as f32;
             let failed = info.failed as f32;
-            if success / (failed + success) < stability_level_down {
+
+            if success / (failed + success) < checker_config.stability.level_down {
                 info!(
                     "稳定率:{:.2}, 降级为不稳定",
                     success / (success + failed)
                 );
                 proxies.move_to_unstable(&proxy);
-            } else if info.fail_times >= fail_times_level_down {
-                info!("连续验证失败2次, 降级为不稳定");
+            } else if info.fail_times >= checker_config.fail_times.level_down {
+                info!(
+                    "连续验证失败{}次, 降级为不稳定",
+                    checker_config.fail_times.level_down
+                );
                 proxies.move_to_unstable(&proxy);
             }
         });
@@ -75,10 +80,6 @@ fn check_stable(proxies: AProxyPool, checker_config: Arc<CheckerConfig>) {
 
 // 检查不稳定代理
 fn check_unstable(proxies: AProxyPool, checker_config: Arc<CheckerConfig>) {
-    let stability_level_up = checker_config.stability.level_up;
-    let stability_remove = checker_config.stability.remove;
-    let fail_times_remove = checker_config.fail_times.remove;
-    let min_check_cnt = checker_config.min_check_cnt;
     let unstable = {
         let proxies = proxies.lock().expect("check_unstable: 无法获取锁");
         proxies.get_unstable().clone()
@@ -90,8 +91,9 @@ fn check_unstable(proxies: AProxyPool, checker_config: Arc<CheckerConfig>) {
         let proxy = proxy.clone();
         let proxies = proxies.clone();
         let checker_config = checker_config.clone();
+
         pool.execute(move || {
-            if check_proxy(&proxy, checker_config) {
+            if check_proxy(&proxy, checker_config.clone()) {
                 info!("验证成功: {}:{}", proxy.ip(), proxy.port());
                 inc_failed_cnt(proxies.clone(), &proxy);
             } else {
@@ -104,16 +106,22 @@ fn check_unstable(proxies: AProxyPool, checker_config: Arc<CheckerConfig>) {
             let success = info.success as f32;
             let failed = info.failed as f32;
             let stability = success / (failed + success);
-            if failed + success >= f32::from(min_check_cnt) {
-                if stability >= stability_level_up {
-                    info!("稳定率:{:.2}, 标记为稳定", stability);
-                    proxies.move_to_stable(&proxy);
-                } else if stability < stability_remove {
-                    info!("稳定率:{:.2}, 从列表中移出", stability);
-                    proxies.remove_unstable(&proxy);
-                }
-            } else if info.fail_times >= fail_times_remove {
-                info!("连续验证失败3次, 从列表中移出");
+
+            if failed + success >= f32::from(checker_config.min_cnt_level_up)
+                && stability >= checker_config.stability.level_up
+            {
+                info!("稳定率:{:.2}, 标记为稳定", stability);
+                proxies.move_to_stable(&proxy);
+            } else if failed + success >= f32::from(checker_config.min_cnt_remove)
+                && stability < checker_config.stability.remove
+            {
+                info!("稳定率:{:.2}, 从列表中移出", stability);
+                proxies.remove_unstable(&proxy);
+            } else if info.fail_times >= checker_config.fail_times.remove {
+                info!(
+                    "连续验证失败{}次, 从列表中移出",
+                    checker_config.fail_times.remove
+                );
                 proxies.remove_unstable(&proxy);
             }
         });

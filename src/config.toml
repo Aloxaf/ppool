@@ -1,9 +1,9 @@
 # 验证线程配置
 [checker]
 # 最大工作线程数量
-max_workers = 20
+max_workers = 30
 # 验证间隔/secs
-interval = 60
+interval = 5
 # 进行HTTP验证的URL
 url_http = "http://www.baidu.com"
 # 进行HTTPS验证的URL
@@ -11,7 +11,9 @@ url_https = "https://www.baidu.com"
 # 验证时允许的最大超时时间
 timeout = 20
 # 进入稳定列表所需最少验证次数
-min_check_cnt = 10
+min_cnt_level_up = 10
+# 移除所需的最少验证次数
+min_cnt_remove = 7
 
 # 对连续失败次数的配置
 [checker.fail_times]

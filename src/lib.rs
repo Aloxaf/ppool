@@ -1,10 +1,12 @@
 #![feature(vec_remove_item)]
 
-pub mod checker_thread;
-mod config;
+mod checker_thread;
+pub mod config;
 pub mod proxy_pool;
 pub mod spider;
-pub mod spider_thread;
+mod spider_thread;
 
-pub use crate::config::{Config, DEFAULT_CONFIG};
+pub use crate::checker_thread::checker_thread;
+pub use crate::config::*;
 pub use crate::proxy_pool::*;
+pub use crate::spider_thread::spider_thread;

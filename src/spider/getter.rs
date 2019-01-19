@@ -16,6 +16,7 @@ pub fn table_getter<T: AsRef<str>>(
     info_pos: &[usize; 4],
 ) -> SpiderResult<Vec<Proxy>> {
     let mut ret = vec![];
+
     for url in url_list {
         let html = get_html(url.as_ref())?;
         let (document, eval_xpath) = get_xpath(&html)?;
@@ -36,16 +37,20 @@ pub fn table_getter<T: AsRef<str>>(
                     }
                 })
                 .collect::<Vec<_>>();
+
             if info.len() < *info_pos.iter().max().unwrap() {
                 continue;
             }
+
             let (ip, port, anonymity, ssl_type) = (
                 &info[info_pos[0]],
                 &info[info_pos[1]],
                 &info[info_pos[2]],
                 &info[info_pos[3]],
             );
+
             info!("{}: [{}, {}, {}, {}]", name, ip, port, anonymity, ssl_type);
+
             ret.push(Proxy::new(ip, port, anonymity, ssl_type));
         }
     }

@@ -31,7 +31,9 @@ pub struct CheckerConfig {
     /// 验证时允许的最大超时时间
     pub timeout: u64,
     /// 进入稳定列表所需最少验证次数
-    pub min_check_cnt: u8,
+    pub min_cnt_level_up: u8,
+    /// 移除所需的最少验证次数
+    pub min_cnt_remove: u8,
     /// 对连续失败次数的配置
     pub fail_times: FailTimes,
     /// 对稳定率的配置

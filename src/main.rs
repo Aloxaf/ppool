@@ -116,6 +116,7 @@ fn run() -> Result<(), Error> {
     } else {
         toml::from_str(DEFAULT_CONFIG).unwrap()
     };
+    let checker_config = Arc::new(checker_config);
 
     // 读取(可能的)上次的数据
     debug!("正在读取缓存");
@@ -136,7 +137,7 @@ fn run() -> Result<(), Error> {
         let proxies = proxies.clone();
         thread::spawn(move || loop {
             spider_thread(proxies.clone(), &spider_config);
-            info!("等待20分钟再次爬取...");
+            info!("等待{}秒再次爬取...", spider_config.interval);
             sleep(Duration::from_secs(spider_config.interval));
         });
     }
@@ -145,9 +146,9 @@ fn run() -> Result<(), Error> {
         let data_path = data_path.clone();
         let proxies = proxies.clone();
         thread::spawn(move || loop {
-            info!("等待1分钟开始验证...");
+            info!("等待{}秒开始验证...", checker_config.interval);
             sleep(Duration::from_secs(checker_config.interval));
-            checker_thread(proxies.clone(), &checker_config);
+            checker_thread(proxies.clone(), checker_config.clone());
             // TODO: 这个"备份"也单独开一个线程?
             info!("写入到磁盘");
             let data = serde_json::to_string_pretty(&proxies).expect("无法序列化");

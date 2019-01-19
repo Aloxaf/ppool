@@ -1,5 +1,6 @@
 use super::proxy::*;
 use super::user_agent;
+use crate::config::*;
 use failure::format_err;
 use libxml::{
     parser::Parser,
@@ -8,6 +9,7 @@ use libxml::{
 };
 use log::{debug, error};
 use reqwest::{header, Client};
+use std::sync::Arc;
 use std::time::Duration;
 
 /// 获取代理
@@ -116,19 +118,19 @@ pub fn get_xpath(
 }
 
 /// 检测代理可用性
-pub fn check_proxy(proxy: &Proxy) -> bool {
+pub fn check_proxy(proxy: &Proxy, config: Arc<CheckerConfig>) -> bool {
     let ssl_type = proxy.ssl_type();
     let proxy = reqwest::Proxy::all(&format!("http://{}:{}", proxy.ip(), proxy.port()))
         .expect("无法初始化代理");
     let client = Client::builder()
-        .timeout(Duration::from_secs(20))
+        .timeout(Duration::from_secs(config.timeout))
         .proxy(proxy)
         .build()
         .expect("无法构建 Client");
     // httpbin 在国外, 应该不能代表国内访问速度
     let res = match ssl_type {
-        SslType::HTTPS => client.head("https://www.baidu.com/").send(),
-        SslType::HTTP => client.head("http://www.baidu.com/").send(),
+        SslType::HTTPS => client.head(&config.url_https).send(),
+        SslType::HTTP => client.head(&config.url_http).send(),
     };
     match res {
         Ok(r) => r.status().is_success(),

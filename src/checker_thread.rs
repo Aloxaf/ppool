@@ -3,6 +3,7 @@ use super::spider::utils::check_proxy;
 use crate::config::CheckerConfig;
 use crate::AProxyPool;
 use log::info;
+use std::sync::Arc;
 use threadpool::ThreadPool;
 
 // TODO: 这个地方频繁上锁是否会影响并发性能
@@ -27,7 +28,7 @@ fn inc_success_cnt(proxies: AProxyPool, proxy: &Proxy) {
 }
 
 // 检查稳定代理
-fn check_stable(proxies: AProxyPool, checker_config: &CheckerConfig) {
+fn check_stable(proxies: AProxyPool, checker_config: Arc<CheckerConfig>) {
     let stability_level_down = checker_config.stability.level_down;
     let fail_times_level_down = checker_config.fail_times.level_down;
     // TODO: 避免 clone ?
@@ -43,8 +44,9 @@ fn check_stable(proxies: AProxyPool, checker_config: &CheckerConfig) {
         // TODO: 避免 clone ?
         let proxy = proxy.clone();
         let proxies = proxies.clone();
+        let checker_config = checker_config.clone();
         pool.execute(move || {
-            if !check_proxy(&proxy) {
+            if !check_proxy(&proxy, checker_config) {
                 info!("验证成功: {}:{}", proxy.ip(), proxy.port());
                 inc_failed_cnt(proxies.clone(), &proxy);
             } else {
@@ -72,7 +74,7 @@ fn check_stable(proxies: AProxyPool, checker_config: &CheckerConfig) {
 }
 
 // 检查不稳定代理
-fn check_unstable(proxies: AProxyPool, checker_config: &CheckerConfig) {
+fn check_unstable(proxies: AProxyPool, checker_config: Arc<CheckerConfig>) {
     let stability_level_up = checker_config.stability.level_up;
     let stability_remove = checker_config.stability.remove;
     let fail_times_remove = checker_config.fail_times.remove;
@@ -87,8 +89,9 @@ fn check_unstable(proxies: AProxyPool, checker_config: &CheckerConfig) {
     for proxy in unstable {
         let proxy = proxy.clone();
         let proxies = proxies.clone();
+        let checker_config = checker_config.clone();
         pool.execute(move || {
-            if check_proxy(&proxy) {
+            if check_proxy(&proxy, checker_config) {
                 info!("验证成功: {}:{}", proxy.ip(), proxy.port());
                 inc_failed_cnt(proxies.clone(), &proxy);
             } else {
@@ -119,9 +122,9 @@ fn check_unstable(proxies: AProxyPool, checker_config: &CheckerConfig) {
 }
 
 /// 代理稳定性检查线程
-pub fn checker_thread(proxies: AProxyPool, checker_config: &CheckerConfig) {
+pub fn checker_thread(proxies: AProxyPool, checker_config: Arc<CheckerConfig>) {
     info!("代理验证开始");
-    check_stable(proxies.clone(), checker_config);
+    check_stable(proxies.clone(), checker_config.clone());
     check_unstable(proxies, checker_config);
     info!("代理验证结束");
 }

@@ -29,7 +29,7 @@ pub struct CheckerConfig {
     /// 进行HTTPS验证的URL
     pub url_https: String,
     /// 验证时允许的最大超时时间
-    pub timeout: u8,
+    pub timeout: u64,
     /// 进入稳定列表所需最少验证次数
     pub min_check_cnt: u8,
     /// 对连续失败次数的配置

@@ -57,14 +57,12 @@ fn check_stable(proxies: AProxyPool, checker_config: Arc<CheckerConfig>) {
 
             let mut proxies = proxies.lock().expect("无法获取锁");
             let info = proxies.info.get(&proxy.get_key()).expect("查无此键");
-            let success = info.success as f32;
-            let failed = info.failed as f32;
+            let success = info.success;
+            let failed = info.failed;
+            let stability = f64::from(success) / f64::from(failed + success);
 
-            if success / (failed + success) < checker_config.stability.level_down {
-                info!(
-                    "稳定率:{:.2}, 降级为不稳定",
-                    success / (success + failed)
-                );
+            if stability < checker_config.stability.level_down {
+                info!("稳定率:{:.2}, 降级为不稳定", stability);
                 proxies.move_to_unstable(&proxy);
             } else if info.fail_times >= checker_config.fail_times.level_down {
                 info!(
@@ -103,24 +101,30 @@ fn check_unstable(proxies: AProxyPool, checker_config: Arc<CheckerConfig>) {
 
             let mut proxies = proxies.lock().expect("无法获取锁");
             let info = proxies.info.get(&proxy.get_key()).expect("查无此键");
-            let success = info.success as f32;
-            let failed = info.failed as f32;
-            let stability = success / (failed + success);
+            let success = info.success;
+            let failed = info.failed;
+            let stability = f64::from(success) / f64::from(failed + success);
 
-            if failed + success >= f32::from(checker_config.min_cnt_level_up)
+            if failed + success >= checker_config.min_cnt_level_up
                 && stability >= checker_config.stability.level_up
             {
                 info!("稳定率:{:.2}, 标记为稳定", stability);
                 proxies.move_to_stable(&proxy);
-            } else if failed + success >= f32::from(checker_config.min_cnt_remove)
+            } else if failed + success >= checker_config.min_cnt_remove
                 && stability < checker_config.stability.remove
             {
-                info!("稳定率:{:.2}, 从列表中移出", stability);
+                info!("稳定率:{:.2}, 从列表中移除", stability);
                 proxies.remove_unstable(&proxy);
             } else if info.fail_times >= checker_config.fail_times.remove {
                 info!(
-                    "连续验证失败{}次, 从列表中移出",
+                    "连续验证失败{}次, 从列表中移除",
                     checker_config.fail_times.remove
+                );
+                proxies.remove_unstable(&proxy);
+            } else if failed + success >= checker_config.max_cnt_remove {
+                info!(
+                    "{}次验证后仍不稳定, 从列表中移除",
+                    checker_config.max_cnt_remove
                 );
                 proxies.remove_unstable(&proxy);
             }

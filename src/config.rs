@@ -31,9 +31,11 @@ pub struct CheckerConfig {
     /// 验证时允许的最大超时时间
     pub timeout: u64,
     /// 进入稳定列表所需最少验证次数
-    pub min_cnt_level_up: u8,
+    pub min_cnt_level_up: u32,
     /// 移除所需的最少验证次数
-    pub min_cnt_remove: u8,
+    pub min_cnt_remove: u32,
+    /// >=这个验证次数后如果还处于不稳定列表则直接移除
+    pub max_cnt_remove: u32,
     /// 对连续失败次数的配置
     pub fail_times: FailTimes,
     /// 对稳定率的配置
@@ -53,11 +55,11 @@ pub struct FailTimes {
 #[derive(Debug, Deserialize)]
 pub struct Stability {
     /// 升级所需
-    pub level_up: f32,
+    pub level_up: f64,
     /// 降级所需
-    pub level_down: f32,
+    pub level_down: f64,
     /// 移除所需
-    pub remove: f32,
+    pub remove: f64,
 }
 
 /// 爬虫配置

@@ -14,6 +14,8 @@ timeout = 20
 min_cnt_level_up = 10
 # 移除所需的最少验证次数
 min_cnt_remove = 7
+# >=这个验证次数后如果还处于不稳定列表则直接移除
+max_cnt_remove = 50
 
 # 对连续失败次数的配置
 [checker.fail_times]
@@ -68,9 +70,7 @@ info_index = [1, 2, 3, 4]
 [[spider.common_table]]
 enable = true
 name = "无忧代理"
-urls = [
-"http://www.data5u.com/free/gngn/index.shtml"
-]
+urls = ["http://www.data5u.com/free/gngn/index.shtml"]
 xpath_line = "//ul[@class=\"l2\"]"
 xpath_col = ".//li/text()"
 info_index = [0, 1, 2, 3]
@@ -78,9 +78,15 @@ info_index = [0, 1, 2, 3]
 [[spider.common_table]]
 enable = true
 name = "IP海"
-urls = [
-"http://www.iphai.com/free/ng"
-]
+urls = ["http://www.iphai.com/free/ng"]
+xpath_line = ".//table//tr[position()>1]"
+xpath_col = "./td/text()"
+info_index = [0, 1, 2, 3]
+
+[[spider.common_table]]
+enable = true
+name = "快代理"
+urls = ["https://www.kuaidaili.com/free/"]
 xpath_line = ".//table//tr[position()>1]"
 xpath_col = "./td/text()"
 info_index = [0, 1, 2, 3]

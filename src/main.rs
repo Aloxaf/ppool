@@ -66,9 +66,6 @@ fn run() -> Result<(), Error> {
 
     let proxy_pool = Arc::new(Mutex::new(proxy_pool));
 
-    // 先启动 server, 防止等会爬虫请求代理的时候 503
-    ppool::server::launch_rocket(proxy_pool.clone());
-
     // 爬虫线程
     // 此处(包括下面)用大括号开启新的作用域, 主要是防止对 proxy_pool 的 shadow & move
     // 导致下面无法继续使用 proxy_pool
@@ -100,6 +97,10 @@ fn run() -> Result<(), Error> {
             sleep(Duration::from_secs(checker_config.interval));
         });
     }
+
+    // 启动 server
+    // TODO: 由于启动的较晚, 爬虫请求代理的时候可能会 503
+    ppool::server::launch_rocket(proxy_pool);
 
     Ok(())
 }

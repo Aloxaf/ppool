@@ -21,7 +21,7 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 pub struct CheckerConfig {
     /// 验证线程数量
-    pub max_workers: u16,
+    pub max_workers: usize,
     /// 间隔时间(secs)
     pub interval: u64,
     /// 进行HTTP验证的URL

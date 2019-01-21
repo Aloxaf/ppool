@@ -12,7 +12,7 @@ use reqwest::{header, Client};
 use std::sync::Arc;
 use std::time::Duration;
 
-/// 获取代理
+/// 来一份代理
 fn get_proxy(ssl_type: &str) -> SpiderResult<reqwest::Proxy> {
     let mut res = reqwest::get(&format!(
         "http://localhost:8000/get?ssl_type={}&anonymity=高匿",
@@ -30,6 +30,7 @@ pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
         let mut client = Client::builder().timeout(Duration::from_secs(20));
         // 第一次不使用代理
         if i > 0 {
+            // 根据 URL 选择代理类型
             let ssl_type = if url.as_ref().contains("https") {
                 "HTTPS"
             } else {
@@ -72,12 +73,14 @@ pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
 pub fn get_xpath(
     html: &str,
 ) -> SpiderResult<(Document, impl Fn(&str, &Node) -> SpiderResult<Vec<Node>>)> {
+    // 先解析 HTML
     let parser = Parser::default_html();
     let document = parser
         .parse_string(&html)
         .map_err(|_| format_err!("无法解析 HTML"))?;
     let context = Context::new(&document).map_err(|_| format_err!("Context 初始化失败"))?;
 
+    // 函数用法: eval_xpath(XPATH, 目标节点)
     let eval_xpath = move |xpath: &str, node: &Node| -> SpiderResult<Vec<Node>> {
         let v = context
             .node_evaluate(xpath, node)

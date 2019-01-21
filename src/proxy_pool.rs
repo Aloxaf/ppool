@@ -1,4 +1,4 @@
-use super::spider::proxy::*;
+use crate::spider::proxy::*;
 use rand::{seq::SliceRandom, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -15,8 +15,20 @@ pub struct Info {
     pub success: u32,
     /// 失败验证次数
     pub failed: u32,
-    /// 连续失败次数
+    /// 连续失败次数, 这一项主要是防止一个高稳定性代理下线以后迟迟不能被剔除
     pub fail_times: u8,
+}
+
+impl Info {
+    #[inline]
+    pub fn stability(&self) -> f64 {
+        f64::from(self.success) / f64::from(self.check_cnt())
+    }
+
+    #[inline]
+    pub fn check_cnt(&self) -> u32 {
+        self.success + self.failed
+    }
 }
 
 // 这个地方简直疯掉了, 干脆全部暴露出来让调用者自己处理
@@ -73,9 +85,9 @@ impl ProxyPool {
     }
 
     /// 从稳定列表中随机取出一个代理
-    pub fn get_random(&mut self) -> &Proxy {
+    pub fn get_random(&mut self) -> Option<&Proxy> {
         let mut rng = thread_rng();
-        self.stable.choose(&mut rng).unwrap()
+        self.stable.choose(&mut rng)
     }
 
     // TODO: 效率太低了

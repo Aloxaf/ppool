@@ -1,5 +1,6 @@
 use rand::{seq::SliceRandom, thread_rng};
 
+/// 随机返回一个 User-Agent
 pub fn random() -> &'static str {
     let mut rng = thread_rng();
     &[

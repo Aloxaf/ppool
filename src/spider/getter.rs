@@ -1,6 +1,8 @@
 use super::proxy::*;
 use super::utils::*;
-use log::info;
+use lazy_static::lazy_static;
+use log::{error, info};
+use regex::Regex;
 
 /// 处理比较规整的代理网站
 pub fn table_getter<T: AsRef<str>>(
@@ -15,6 +17,11 @@ pub fn table_getter<T: AsRef<str>>(
     // ip, 端口, 匿名性, 类型 所在的位置
     info_pos: &[usize; 4],
 ) -> SpiderResult<Vec<Proxy>> {
+    lazy_static! {
+        static ref RE_IP: Regex = Regex::new(r"[0-9.]+").unwrap();
+        static ref RE_PORT: Regex = Regex::new(r"\d+").unwrap();
+    }
+
     let mut ret = vec![];
 
     for url in url_list {
@@ -55,9 +62,12 @@ pub fn table_getter<T: AsRef<str>>(
                 &info[info_pos[3]],
             );
 
-            info!("{}: [{}, {}, {}, {}]", name, ip, port, anonymity, ssl_type);
-
-            ret.push(Proxy::new(ip, port, anonymity, ssl_type));
+            if RE_IP.is_match(ip) && RE_PORT.is_match(port) {
+                info!("{}: [{}, {}, {}, {}]", name, ip, port, anonymity, ssl_type);
+                ret.push(Proxy::new(ip, port, anonymity, ssl_type));
+            } else {
+                error!("BAD IP from {}: [{}, {}]", name, ip, port);
+            }
         }
     }
     Ok(ret)

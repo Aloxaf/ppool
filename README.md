@@ -27,6 +27,7 @@ RUST_LOG=ppool=debug ppool
 ## 缺点
 
 - 扩展麻烦了点...复杂的规则目前只能硬编码进代码
+- 代理太多目测遭不住
 
 ## TODO
 
@@ -40,9 +41,9 @@ RUST_LOG=ppool=debug ppool
 - [x] 更完善的错误处理(现在到处都是unwrap)
 - [x] 更完善的接口(能够根据需求预筛选)
 - [ ] 更少 clone (更高性能)
-- [ ] 更少 lock (lock-free?? evmap? crossbeam? tokio? mio?)
+- [ ] 更少 lock (lock-free?? evmap? crossbeam? tokio? mio? rwlock?)
 - [x] 更好看的变量名 (
-- [ ] 更方便地修改配置 (reload api)
-- [ ] 异步 (其实没用过, 只是先放在这里 
+- [x] 更方便地修改配置 (reload api)
+- [ ] 异步 (其实没用过, 只是先放在这里
 - [x] 通过代理爬取代理
 - [x] 通过配置文件定义一些简单的爬虫

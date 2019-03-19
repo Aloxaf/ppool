@@ -8,7 +8,7 @@ type MyState = (AProxyPool, Arc<RwLock<bool>>, Arc<RwLock<Option<String>>>);
 #[get("/")]
 fn index(_state: State<MyState>) -> &'static str {
     r#"{
-  "get?<ssl_type:str>&<anonymity:str>&<stability:f32>": "随机获取一个代理, 无特殊需求请勿增加参数, 速度较慢",
+  "get?<ssl_type:str>&<anonymity:str>&<stability:f32>": "随机获取一个代理, 带参数请求速度较慢. 大量请求建议使用 get_all 在本地筛选",
   "get_all?<ssl_type:str>&<anonymity:str>&<stability:f32>": "获取所有可用代理",
   "get_status": "获取代理池信息",
 }"#

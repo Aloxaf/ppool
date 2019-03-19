@@ -90,7 +90,6 @@ impl ProxyPool {
         self.stable.choose(&mut rng)
     }
 
-    // TODO: 效率太低了
     /// 根据条件筛选代理
     pub fn select(
         &self,
@@ -98,33 +97,33 @@ impl ProxyPool {
         anonymity: Option<String>,
         stability: Option<f32>,
     ) -> Vec<&Proxy> {
-        let mut iter = self.stable.iter().map(|x| x).collect::<Vec<_>>();
-        if let Some(ssl_type) = ssl_type {
-            let ssl_type = SslType::from(ssl_type);
-            iter = iter
-                .into_iter()
-                .filter(|proxy| proxy.ssl_type() == ssl_type)
-                .collect();
-        }
-        if let Some(anonymity) = anonymity {
-            let anonymity = AnonymityLevel::from(anonymity);
-            iter = iter
-                .into_iter()
-                .filter(|proxy| proxy.anonymity() == anonymity)
-                .collect();
-        }
-        if let Some(stability) = stability {
-            iter = iter
-                .into_iter()
-                .filter(|proxy| {
+        self.stable
+            .iter()
+            .filter(|proxy| {
+                if let Some(ssl_type) = &ssl_type {
+                    proxy.ssl_type() == SslType::from(ssl_type)
+                } else {
+                    true
+                }
+            })
+            .filter(|proxy| {
+                if let Some(anonymity) = &anonymity {
+                    proxy.anonymity() == AnonymityLevel::from(anonymity)
+                } else {
+                    true
+                }
+            })
+            .filter(|proxy| {
+                if let Some(stability) = stability {
                     let item = &self.info[&proxy.get_key()];
                     let failed = item.failed as f32;
                     let success = item.success as f32;
                     success / (success + failed) >= stability
-                })
-                .collect()
-        }
-        iter
+                } else {
+                    true
+                }
+            })
+            .collect()
     }
 
     pub fn select_random(

@@ -70,14 +70,16 @@ fn run() -> Result<(), Error> {
     let config_file = matches.value_of("config").map(ToOwned::to_owned);
 
     let proxy_pool = init_proxy_pool();
-
     let reload = Arc::new(RwLock::new(false));
+    let password = Arc::new(RwLock::new(None));
 
     // 启动 server
     let server = {
         let proxy_pool = proxy_pool.clone();
         let reload = reload.clone();
-        thread::spawn(|| ppool::server::launch_rocket((proxy_pool, reload)))
+        let password = password.clone();
+        // TODO: 此处使用元组可读性太低了点...
+        thread::spawn(|| ppool::server::launch_rocket((proxy_pool, reload, password)))
     };
 
     thread::spawn(move || loop {
@@ -86,9 +88,12 @@ fn run() -> Result<(), Error> {
         // 而 spider_config 由于用到的相关变量都是 Copy 的, 所以直接传就行了
         info!("正在读取配置");
         let Config {
+            password: new_password,
             checker: checker_config,
             spider: spider_config,
         }: Config = init_config(config_file.as_ref()).expect("解析配置文件错误");
+
+        *password.write().unwrap() = Some(new_password);
 
         // 用 Arc wrap 一下 checker_config
         // TODO: 此处的 Arc 感觉可以避免, CheckerConfig 内部可以试试不继续嵌套 struct 了

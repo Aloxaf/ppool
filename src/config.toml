@@ -1,3 +1,5 @@
+# 管理密码
+password = "Pr0Xy_pPo01"
 # 验证线程配置
 [checker]
 # 最大工作线程数量

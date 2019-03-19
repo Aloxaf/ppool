@@ -2,7 +2,8 @@ use crate::proxy_pool::*;
 use rocket::{get, routes, State};
 use std::sync::{Arc, RwLock};
 
-type MyState = (AProxyPool, Arc<RwLock<bool>>);
+// 代理池, 是否重载配置, 管理密码
+type MyState = (AProxyPool, Arc<RwLock<bool>>, Arc<RwLock<Option<String>>>);
 
 #[get("/")]
 fn index(_state: State<MyState>) -> &'static str {
@@ -72,10 +73,18 @@ fn get_all(
 // TODO: del api
 // 其实并不想增加这个 API, 感觉没啥用...还增加复杂度
 
-// TODO: 权限控制
-#[get("/reload")]
-fn reload(state: State<MyState>) {
-    *state.1.write().unwrap() = true;
+#[get("/reload?<password>")]
+fn reload(state: State<MyState>, password: Option<String>) -> &'static str {
+    if *state.2.read().unwrap() == password {
+        *state.1.write().unwrap() = true;
+        r#"{{
+    "success": true
+}}"#
+    } else {
+        r#"{{
+    "success": false
+}}"#
+    }
 }
 
 /// 火箭发射!

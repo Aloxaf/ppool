@@ -11,6 +11,8 @@ pub const DEFAULT_CONFIG: &str = include_str!("config.toml");
 /// 配置
 #[derive(Debug, Deserialize)]
 pub struct Config {
+    /// 管理密码
+    pub password: String,
     /// 验证线程
     pub checker: CheckerConfig,
     /// 爬虫线程

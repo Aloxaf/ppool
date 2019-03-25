@@ -97,33 +97,26 @@ impl ProxyPool {
         anonymity: Option<String>,
         stability: Option<f32>,
     ) -> Vec<&Proxy> {
-        self.stable
-            .iter()
-            .filter(|proxy| {
-                if let Some(ssl_type) = &ssl_type {
-                    proxy.ssl_type() == SslType::from(ssl_type)
-                } else {
-                    true
-                }
-            })
-            .filter(|proxy| {
-                if let Some(anonymity) = &anonymity {
-                    proxy.anonymity() == AnonymityLevel::from(anonymity)
-                } else {
-                    true
-                }
-            })
-            .filter(|proxy| {
-                if let Some(stability) = stability {
-                    let item = &self.info[&proxy.get_key()];
-                    let failed = item.failed as f32;
-                    let success = item.success as f32;
-                    success / (success + failed) >= stability
-                } else {
-                    true
-                }
-            })
-            .collect()
+        let mut iter = Box::new(self.stable.iter()) as Box<Iterator<Item = &Proxy>>;
+        if let Some(ssl_type) = ssl_type {
+            let ssl_type = SslType::from(ssl_type);
+            iter = Box::new(iter.filter(move |proxy| proxy.ssl_type() == ssl_type))
+                as Box<Iterator<Item = &Proxy>>;
+        }
+        if let Some(anonymity) = anonymity {
+            let anonymity = AnonymityLevel::from(anonymity);
+            iter = Box::new(iter.filter(move |proxy| proxy.anonymity() == anonymity))
+                as Box<Iterator<Item = &Proxy>>;
+        }
+        if let Some(stability) = stability {
+            iter = Box::new(iter.filter(move |proxy| {
+                let item = &self.info[&proxy.get_key()];
+                let failed = item.failed as f32;
+                let success = item.success as f32;
+                success / (success + failed) >= stability
+            })) as Box<Iterator<Item = &Proxy>>;
+        }
+        iter.collect()
     }
 
     pub fn select_random(

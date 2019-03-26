@@ -1,5 +1,6 @@
 use failure::Error;
 use serde::{Deserialize, Serialize};
+use std::net::Ipv4Addr;
 
 pub type SpiderResult<T> = Result<T, Error>;
 
@@ -48,7 +49,7 @@ impl<T: Sized + AsRef<str>> From<T> for SslType {
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Proxy {
-    ip: String,
+    ip: Ipv4Addr,
     port: u16,
     anonymity: AnonymityLevel,
     ssl_type: SslType,
@@ -57,16 +58,16 @@ pub struct Proxy {
 impl Proxy {
     pub fn new(ip: &str, port: &str, anonymity: &str, ssl_type: &str) -> Self {
         Self {
-            ip: ip.to_owned(),
-            port: port.parse::<u16>().expect("failed to parse port"),
+            ip: ip.parse().expect("failed to parse IP"),
+            port: port.parse().expect("failed to parse port"),
             anonymity: AnonymityLevel::from(anonymity),
             ssl_type: SslType::from(ssl_type),
         }
     }
 
     #[inline]
-    pub fn ip(&self) -> &str {
-        &self.ip
+    pub fn ip(&self) -> Ipv4Addr {
+        self.ip
     }
 
     #[inline]

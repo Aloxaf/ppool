@@ -1,6 +1,6 @@
 use crate::config::*;
 use crate::proxy_pool::*;
-use crate::spider::getter::table_getter;
+use crate::spider::getter::{regex_getter, table_getter};
 use log::{error, info};
 
 /// 爬虫线程
@@ -33,13 +33,29 @@ pub fn spider_thread(proxy_pool: AProxyPool, spider_config: &SpiderConfig) {
         let mut proxy_pool = proxy_pool.lock().expect("spider_thread: 无法获取锁");
         proxy_pool.extend_unstable(proxies);
     }
-    // TODO: 实现这个
+
     for rules in &spider_config.common_regex {
-        let CommonRegex { enable, .. } = rules;
+        let CommonRegex {
+            enable,
+            name,
+            urls,
+            ip,
+            port,
+            anonymity,
+            ssl_type,
+        } = rules;
         if !enable {
             continue;
         }
-        unimplemented!("通过 regex 自定义爬虫尚未实现")
+        let proxies = match regex_getter(name, urls, ip, port, anonymity, ssl_type) {
+            Err(e) => {
+                error!("{:#?}", e);
+                vec![]
+            }
+            Ok(v) => v,
+        };
+        let mut proxy_pool = proxy_pool.lock().expect("spider_thread: 无法获取锁");
+        proxy_pool.extend_unstable(proxies);
     }
     info!("代理爬取结束");
 }

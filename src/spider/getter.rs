@@ -1,5 +1,6 @@
 use super::proxy::*;
 use super::utils::*;
+use itertools::izip;
 use lazy_static::lazy_static;
 use log::{error, info};
 use regex::Regex;
@@ -70,5 +71,47 @@ pub fn table_getter<T: AsRef<str>>(
             }
         }
     }
+    Ok(ret)
+}
+
+/// 用 正则表达式爬取
+pub fn regex_getter<T: AsRef<str>>(
+    // 网站名称, 用于日志
+    name: &str,
+    // URL 列表
+    url_list: &[T],
+    // 提取 IP
+    re_ip: &str,
+    // 提取端口
+    re_port: &str,
+    // 提取匿名程度
+    re_anonymity: &str,
+    // 提取 SSL 类型
+    re_ssl_type: &str,
+) -> SpiderResult<Vec<Proxy>> {
+    let re_ip = Regex::new(re_ip)?;
+    let re_port = Regex::new(re_port)?;
+    let re_anonymity = Regex::new(re_anonymity)?;
+    let re_ssl_type = Regex::new(re_ssl_type)?;
+
+    let mut ret = vec![];
+    for url in url_list {
+        let html = get_html(url.as_ref())?;
+
+        for (ip, port, anonymity, ssl_type) in izip!(
+            re_ip.captures_iter(&html),
+            re_port.captures_iter(&html),
+            re_anonymity.captures_iter(&html),
+            re_ssl_type.captures_iter(&html)
+        ) {
+            let ip = &ip[0];
+            let port = &port[0];
+            let anonymity = &anonymity[0];
+            let ssl_type = &ssl_type[0];
+            info!("{}: [{}, {}, {}, {}]", name, ip, port, anonymity, ssl_type);
+            ret.push(Proxy::new(ip, port, anonymity, ssl_type));
+        }
+    }
+
     Ok(ret)
 }

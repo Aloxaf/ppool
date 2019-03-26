@@ -23,7 +23,7 @@ lazy_static! {
         let mut data_path = app_dir(AppDataType::UserData, &APP_INFO, "proxy_list")
             .expect("无法创建 UserData 目录");
         data_path.push("proxies.json");
-        debug!("data_path: {:?}", &data_path);
+        debug!("data_path: {}", data_path.display());
         data_path
     };
 }
@@ -37,7 +37,7 @@ fn init_proxy_pool() -> AProxyPool {
         Ok(file) => serde_json::from_reader(file).unwrap(),
         Err(err) => {
             // 打开失败时, 可能是不存在, 也可能是其他问题, 此处输出错误信息便于调试
-            debug!("{:?}", err);
+            debug!("{}", err);
             ProxyPool::new()
         }
     };
@@ -48,10 +48,10 @@ fn init_proxy_pool() -> AProxyPool {
 fn init_config(config_file: Option<&String>) -> Result<Config, Error> {
     if let Some(config_file) = config_file {
         let mut file = std::fs::File::open(config_file)
-            .map_err(|e| format_err!("无法读取配置文件: {:#?}", e))?;
+            .map_err(|e| format_err!("无法读取配置文件: {}", e))?;
         let mut s = String::new();
         file.read_to_string(&mut s)?;
-        Ok(toml::from_str(&s).map_err(|e| format_err!("配置文件解析失败: {:#?}", e))?)
+        Ok(toml::from_str(&s).map_err(|e| format_err!("配置文件解析失败: {}", e))?)
     } else {
         // 默认配置的解析一般来说是不会失败的...
         Ok(toml::from_str(DEFAULT_CONFIG).expect("默认配置解析失败"))
@@ -160,7 +160,7 @@ fn main() {
     env_logger::init();
 
     if let Err(e) = run() {
-        eprintln!("{:#?}", e);
+        eprintln!("{}", e);
         std::process::exit(1);
     }
 }

@@ -38,7 +38,7 @@ pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
             };
             match get_proxy(ssl_type) {
                 Ok(proxy) => client = client.proxy(proxy),
-                Err(err) => error!("获取代理失败: {:?}", err),
+                Err(err) => error!("获取代理失败: {}", err),
             }
         }
         let client = client.build()?;
@@ -63,7 +63,7 @@ pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
                     error!("get_html: {}", res.status());
                 }
             }
-            Err(err) => error!("get_html: {:?}", err),
+            Err(err) => error!("get_html: {}", err),
         }
     }
     Err(format_err!("访问 {} 失败", url.as_ref()))

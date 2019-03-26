@@ -25,7 +25,7 @@ pub fn spider_thread(proxy_pool: AProxyPool, spider_config: &SpiderConfig) {
         }
         let proxies = match table_getter(name, urls, xpath_line, xpath_col, info_index) {
             Err(e) => {
-                error!("{:#?}", e);
+                error!("{}", e);
                 vec![]
             }
             Ok(v) => v,
@@ -49,7 +49,7 @@ pub fn spider_thread(proxy_pool: AProxyPool, spider_config: &SpiderConfig) {
         }
         let proxies = match regex_getter(name, urls, ip, port, anonymity, ssl_type) {
             Err(e) => {
-                error!("{:#?}", e);
+                error!("{}", e);
                 vec![]
             }
             Ok(v) => v,

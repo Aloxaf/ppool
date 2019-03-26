@@ -1,6 +1,7 @@
 use failure::Error;
 use serde::{Deserialize, Serialize};
 use std::net::Ipv4Addr;
+use std::str::FromStr;
 
 pub type SpiderResult<T> = Result<T, Error>;
 
@@ -15,17 +16,18 @@ pub enum AnonymityLevel {
     Elite,
 }
 
-impl<T: Sized + AsRef<str>> From<T> for AnonymityLevel {
-    fn from(s: T) -> Self {
-        let s = s.as_ref();
-        if s.contains("高") {
+impl FromStr for AnonymityLevel {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(if s.contains("高") {
             AnonymityLevel::Elite
         } else if s.contains("普") {
             AnonymityLevel::Anonymous
         } else {
             // 默认透明
             AnonymityLevel::Transparent
-        }
+        })
     }
 }
 
@@ -35,15 +37,16 @@ pub enum SslType {
     HTTPS,
 }
 
-impl<T: Sized + AsRef<str>> From<T> for SslType {
-    fn from(s: T) -> Self {
-        let s = s.as_ref();
-        if s.contains("HTTPS") || s.contains("https") {
+impl FromStr for SslType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(if s.contains("HTTPS") || s.contains("https") {
             SslType::HTTPS
         } else {
             // 默认 HTTP
             SslType::HTTP
-        }
+        })
     }
 }
 
@@ -60,8 +63,8 @@ impl Proxy {
         Self {
             ip: ip.parse().expect("failed to parse IP"),
             port: port.parse().expect("failed to parse port"),
-            anonymity: AnonymityLevel::from(anonymity),
-            ssl_type: SslType::from(ssl_type),
+            anonymity: anonymity.parse().unwrap(),
+            ssl_type: ssl_type.parse().unwrap(),
         }
     }
 

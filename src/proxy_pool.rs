@@ -99,12 +99,12 @@ impl ProxyPool {
     ) -> Vec<&Proxy> {
         let mut iter = Box::new(self.stable.iter()) as Box<Iterator<Item = &Proxy>>;
         if let Some(ssl_type) = ssl_type {
-            let ssl_type = SslType::from(ssl_type);
+            let ssl_type = ssl_type.parse().unwrap();
             iter = Box::new(iter.filter(move |proxy| proxy.ssl_type() == ssl_type))
                 as Box<Iterator<Item = &Proxy>>;
         }
         if let Some(anonymity) = anonymity {
-            let anonymity = AnonymityLevel::from(anonymity);
+            let anonymity = anonymity.parse().unwrap();
             iter = Box::new(iter.filter(move |proxy| proxy.anonymity() == anonymity))
                 as Box<Iterator<Item = &Proxy>>;
         }

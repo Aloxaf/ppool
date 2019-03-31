@@ -3,9 +3,9 @@ use rand::{seq::SliceRandom, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::mem;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
-pub type AProxyPool = Arc<Mutex<ProxyPool>>;
+pub type AProxyPool = Arc<RwLock<ProxyPool>>;
 // TODO: 这个地方不想用 String, 额外 clone 了一次
 pub type ProxyInfo = HashMap<String, Info>;
 
@@ -43,6 +43,7 @@ pub struct ProxyPool {
     pub stable: Vec<Proxy>,
     /// 用于去重 & 记录验证失败次数
     pub info: ProxyInfo,
+    // TODO: 此处 info 可否单独提出来, 因为 info 需要被频繁改动, 放在一起影响并发性能
 }
 
 impl ProxyPool {
@@ -85,7 +86,7 @@ impl ProxyPool {
     }
 
     /// 从稳定列表中随机取出一个代理
-    pub fn get_random(&mut self) -> Option<&Proxy> {
+    pub fn get_random(&self) -> Option<&Proxy> {
         let mut rng = thread_rng();
         self.stable.choose(&mut rng)
     }

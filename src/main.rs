@@ -7,7 +7,7 @@ use ppool::{proxy_pool::*, *};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use std::thread::{self, sleep};
 use std::time::Duration;
 
@@ -42,7 +42,7 @@ fn init_proxy_pool() -> AProxyPool {
         }
     };
 
-    Arc::new(Mutex::new(proxy_pool))
+    Arc::new(RwLock::new(proxy_pool))
 }
 
 fn init_config(config_file: Option<&String>) -> Result<Config, Error> {

@@ -41,7 +41,7 @@ RUST_LOG=ppool=debug ppool
 - [x] 更完善的错误处理(现在到处都是unwrap)
 - [x] 更完善的接口(能够根据需求预筛选)
 - [ ] 更少 clone (更高性能)
-- [ ] 更少 lock (lock-free?? evmap? crossbeam? tokio? mio? rwlock?)
+- [ ] 更高并发性能 (lock-free?? evmap? crossbeam? tokio? mio? rwlock?)
 - [x] 更好看的变量名 (
 - [x] 更方便地修改配置 (reload api)
 - [ ] 异步 (其实没用过, 只是先放在这里

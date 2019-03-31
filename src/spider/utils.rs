@@ -20,8 +20,7 @@ fn get_proxy(ssl_type: &str) -> SpiderResult<reqwest::Proxy> {
     ))?;
     let proxy: Proxy = serde_json::from_str(&res.text()?)?;
     info!("获取代理: {}:{}", proxy.ip(), proxy.port());
-    let proxy = reqwest::Proxy::all(&format!("http://{}:{}", proxy.ip(), proxy.port())).unwrap();
-    Ok(proxy)
+    Ok(reqwest::Proxy::all(&format!("http://{}:{}", proxy.ip(), proxy.port())).unwrap())
 }
 
 /// 获取网页
@@ -42,6 +41,7 @@ pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
             }
         }
         let client = client.build()?;
+
         let res = client
             .get(url.as_ref())
             .header(header::CONNECTION, "keep-alive")
@@ -55,6 +55,7 @@ pub fn get_html<S: AsRef<str>>(url: S) -> SpiderResult<String> {
             .header(header::ACCEPT_ENCODING, "gzip, deflate, sdch")
             .header(header::ACCEPT_LANGUAGE, "zh-CN,zh;q=0.8")
             .send();
+
         match res {
             Ok(mut res) => {
                 if res.status().is_success() {

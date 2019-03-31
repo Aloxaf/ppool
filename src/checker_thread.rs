@@ -9,7 +9,7 @@ use threadpool::ThreadPool;
 // TODO: 这个地方频繁上锁是否会影响并发性能
 #[inline]
 fn inc_failed_cnt(proxy_pool: AProxyPool, proxy: &Proxy) {
-    let mut proxy_pool = proxy_pool.lock().expect("inc_failed_cnt: 无法获取锁");
+    let mut proxy_pool = proxy_pool.write().expect("inc_failed_cnt: 无法获取锁");
     let mut info = proxy_pool
         .info
         .get_mut(&proxy.get_key())
@@ -20,7 +20,7 @@ fn inc_failed_cnt(proxy_pool: AProxyPool, proxy: &Proxy) {
 
 #[inline]
 fn inc_success_cnt(proxy_pool: AProxyPool, proxy: &Proxy) {
-    let mut proxy_pool = proxy_pool.lock().expect("inc_success_cnt: 无法获取锁");
+    let mut proxy_pool = proxy_pool.write().expect("inc_success_cnt: 无法获取锁");
     let mut info = proxy_pool
         .info
         .get_mut(&proxy.get_key())
@@ -34,7 +34,7 @@ fn check_stable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
     // TODO: 避免 clone ?
     // 为了避免验证代理时造成阻塞, 先 clone 一遍
     let stable = {
-        let proxy_pool = proxy_pool.lock().expect("check_stable: 无法获取锁");
+        let proxy_pool = proxy_pool.read().expect("check_stable: 无法获取锁");
         proxy_pool.get_stable().clone()
     };
 
@@ -55,7 +55,7 @@ fn check_stable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
                 inc_success_cnt(proxy_pool.clone(), &proxy);
             }
 
-            let mut proxy_pool = proxy_pool.lock().expect("无法获取锁");
+            let mut proxy_pool = proxy_pool.write().expect("无法获取锁");
             let info = proxy_pool.info.get(&proxy.get_key()).expect("查无此键");
             let stability = info.stability();
 
@@ -82,7 +82,7 @@ fn check_stable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
 // 检查不稳定代理
 fn check_unstable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
     let unstable = {
-        let proxy_pool = proxy_pool.lock().expect("check_unstable: 无法获取锁");
+        let proxy_pool = proxy_pool.read().expect("check_unstable: 无法获取锁");
         proxy_pool.get_unstable().clone()
     };
 
@@ -101,7 +101,7 @@ fn check_unstable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
                 inc_success_cnt(proxy_pool.clone(), &proxy);
             }
 
-            let mut proxy_pool = proxy_pool.lock().expect("无法获取锁");
+            let mut proxy_pool = proxy_pool.write().expect("无法获取锁");
             let info = proxy_pool.info.get(&proxy.get_key()).expect("查无此键");
             let stability = info.stability();
 

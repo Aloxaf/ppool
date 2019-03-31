@@ -16,7 +16,7 @@ fn index(_state: State<MyState>) -> &'static str {
 
 #[get("/get_status")]
 fn get_status(state: State<MyState>) -> String {
-    let proxy_pool = state.0.lock().unwrap();
+    let proxy_pool = state.0.read().unwrap();
     let stable_cnt = proxy_pool.get_stable().len();
     let unstable_cnt = proxy_pool.get_unstable().len();
     format!(
@@ -39,7 +39,7 @@ fn get_single(
     anonymity: Option<String>,
     stability: Option<f32>,
 ) -> String {
-    let mut proxy_pool = state.0.lock().unwrap();
+    let proxy_pool = state.0.read().unwrap();
 
     // 啥参数都没有, 直接调用 get_random, O(1) 时间复杂度
     let proxy = if ssl_type.is_none() && anonymity.is_none() && stability.is_none() {
@@ -59,7 +59,7 @@ fn get_all(
     anonymity: Option<String>,
     stability: Option<f32>,
 ) -> String {
-    let proxy_pool = state.0.lock().unwrap();
+    let proxy_pool = state.0.read().unwrap();
     // get_stable 返回 &Vec<T>, select 返回 Vec<&T>, 所以这个地方无法简化成 get_single 的逻辑
     if ssl_type.is_none() && anonymity.is_none() && stability.is_none() {
         let proxy = proxy_pool.get_stable();

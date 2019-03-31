@@ -33,11 +33,11 @@ fn init_proxy_pool() -> Result<AProxyPool, Error> {
     info!("正在读取缓存");
 
     // 存在 proxies.json 的话, 读取 & 反序列化之
-    if Path::new(*DATA_PATH).exists() {
-        let proxy_pool = serde_json::from_reader(File::open(*DATA_PATH)?)?;
-        Arc::new(RwLock::new(proxy_pool))
+    if Path::new(&*DATA_PATH).exists() {
+        let proxy_pool = serde_json::from_reader(File::open(&*DATA_PATH)?)?;
+        Ok(Arc::new(RwLock::new(proxy_pool)))
     } else {
-        Arc::new(RwLock::new(ProxyPool::new()))
+        Ok(Arc::new(RwLock::new(ProxyPool::new())))
     }
 }
 

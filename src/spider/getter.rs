@@ -1,7 +1,6 @@
 use super::proxy::*;
 use super::utils::*;
 use itertools::izip;
-use lazy_static::lazy_static;
 use log::{error, info};
 use regex::Regex;
 
@@ -18,11 +17,6 @@ pub fn table_getter<T: AsRef<str>>(
     // ip, 端口, 匿名性, 类型 所在的位置
     info_pos: &[usize; 4],
 ) -> SpiderResult<Vec<Proxy>> {
-    lazy_static! {
-        static ref RE_IP: Regex = Regex::new(r"[0-9.]+").unwrap();
-        static ref RE_PORT: Regex = Regex::new(r"\d+").unwrap();
-    }
-
     let mut ret = vec![];
 
     for url in url_list {
@@ -37,17 +31,12 @@ pub fn table_getter<T: AsRef<str>>(
             // 提取列表的每一列
             let info = eval_xpath(xpath_2, &proxy)?
                 .iter()
-                .filter_map(|node| {
+                .map(|node| {
                     // 取出内容, 并排除空白列
                     let s = document.node_to_string(node);
                     // 此处应该有更完整的 unescape
                     let s = s.replace("&#13;", "\r");
-                    let s = s.trim();
-                    if s.is_empty() {
-                        None
-                    } else {
-                        Some(s.to_owned())
-                    }
+                    s.trim().to_owned()
                 })
                 .collect::<Vec<_>>();
 
@@ -63,9 +52,9 @@ pub fn table_getter<T: AsRef<str>>(
                 &info[info_pos[3]],
             );
 
-            if RE_IP.is_match(ip) && RE_PORT.is_match(port) {
+            if let Ok(proxy) = Proxy::new(ip, port, anonymity, ssl_type) {
                 info!("{}: [{}, {}, {}, {}]", name, ip, port, anonymity, ssl_type);
-                ret.push(Proxy::new(ip, port, anonymity, ssl_type));
+                ret.push(proxy);
             } else {
                 error!("BAD IP from {}: [{}, {}]", name, ip, port);
             }
@@ -108,8 +97,13 @@ pub fn regex_getter<T: AsRef<str>>(
             let port = &port[0];
             let anonymity = &anonymity[0];
             let ssl_type = &ssl_type[0];
-            info!("{}: [{}, {}, {}, {}]", name, ip, port, anonymity, ssl_type);
-            ret.push(Proxy::new(ip, port, anonymity, ssl_type));
+
+            if let Ok(proxy) = Proxy::new(ip, port, anonymity, ssl_type) {
+                info!("{}: [{}, {}, {}, {}]", name, ip, port, anonymity, ssl_type);
+                ret.push(proxy);
+            } else {
+                error!("BAD IP from {}: [{}, {}]", name, ip, port);
+            }
         }
     }
 

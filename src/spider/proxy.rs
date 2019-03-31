@@ -17,7 +17,7 @@ pub enum AnonymityLevel {
 }
 
 impl FromStr for AnonymityLevel {
-    type Err = ();
+    type Err = !;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(if s.contains("高") {
@@ -38,7 +38,7 @@ pub enum SslType {
 }
 
 impl FromStr for SslType {
-    type Err = ();
+    type Err = !;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(if s.contains("HTTPS") || s.contains("https") {
@@ -59,13 +59,13 @@ pub struct Proxy {
 }
 
 impl Proxy {
-    pub fn new(ip: &str, port: &str, anonymity: &str, ssl_type: &str) -> Self {
-        Self {
-            ip: ip.parse().expect("failed to parse IP"),
-            port: port.parse().expect("failed to parse port"),
-            anonymity: anonymity.parse().unwrap(),
-            ssl_type: ssl_type.parse().unwrap(),
-        }
+    pub fn new(ip: &str, port: &str, anonymity: &str, ssl_type: &str) -> Result<Self, Error> {
+        Ok(Self {
+            ip: ip.parse()?,
+            port: port.parse()?,
+            anonymity: anonymity.parse()?,
+            ssl_type: ssl_type.parse()?,
+        })
     }
 
     #[inline]

@@ -6,7 +6,7 @@ use log::{debug, info};
 use ppool::{proxy_pool::*, *};
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::sync::{Arc, RwLock};
 use std::thread::{self, sleep};
 use std::time::Duration;
@@ -28,21 +28,17 @@ lazy_static! {
     };
 }
 
-fn init_proxy_pool() -> AProxyPool {
+fn init_proxy_pool() -> Result<AProxyPool, Error> {
     // 读取(可能的)上次的数据
     info!("正在读取缓存");
 
     // 存在 proxies.json 的话, 读取 & 反序列化之
-    let proxy_pool = match File::open(DATA_PATH.clone()) {
-        Ok(file) => serde_json::from_reader(file).unwrap(),
-        Err(err) => {
-            // 打开失败时, 可能是不存在, 也可能是其他问题, 此处输出错误信息便于调试
-            debug!("{}", err);
-            ProxyPool::new()
-        }
-    };
-
-    Arc::new(RwLock::new(proxy_pool))
+    if Path::new(*DATA_PATH).exists() {
+        let proxy_pool = serde_json::from_reader(File::open(*DATA_PATH)?)?;
+        Arc::new(RwLock::new(proxy_pool))
+    } else {
+        Arc::new(RwLock::new(ProxyPool::new()))
+    }
 }
 
 fn init_config(config_file: Option<&String>) -> Result<Config, Error> {
@@ -69,7 +65,7 @@ fn run() -> Result<(), Error> {
 
     let config_file = matches.value_of("config").map(ToOwned::to_owned);
 
-    let proxy_pool = init_proxy_pool();
+    let proxy_pool = init_proxy_pool()?;
     let reload = Arc::new(RwLock::new(false));
     let password = Arc::new(RwLock::new(None));
 

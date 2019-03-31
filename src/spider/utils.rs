@@ -20,7 +20,7 @@ fn get_proxy(ssl_type: &str) -> SpiderResult<reqwest::Proxy> {
     ))?;
     let proxy: Proxy = serde_json::from_str(&res.text()?)?;
     info!("获取代理: {}:{}", proxy.ip(), proxy.port());
-    Ok(reqwest::Proxy::all(&format!("http://{}:{}", proxy.ip(), proxy.port())).unwrap())
+    Ok(reqwest::Proxy::all(&format!("http://{}:{}", proxy.ip(), proxy.port()))?)
 }
 
 /// 获取网页

@@ -1,4 +1,5 @@
 #![feature(vec_remove_item, proc_macro_hygiene, decl_macro)]
+#![feature(never_type)]
 
 mod checker_thread;
 pub mod config;

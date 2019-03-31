@@ -1,6 +1,6 @@
 use failure::Error;
 use serde::{Deserialize, Serialize};
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, SocketAddrV4};
 use std::str::FromStr;
 
 pub type SpiderResult<T> = Result<T, Error>;
@@ -89,7 +89,7 @@ impl Proxy {
     }
 
     #[inline]
-    pub fn get_key(&self) -> String {
-        format!("{}:{}", self.ip, self.port)
+    pub fn get_key(&self) -> SocketAddrV4 {
+        SocketAddrV4::new(self.ip, self.port)
     }
 }

@@ -3,11 +3,11 @@ use rand::{seq::SliceRandom, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::mem;
+use std::net::SocketAddrV4;
 use std::sync::{Arc, RwLock};
 
 pub type AProxyPool = Arc<RwLock<ProxyPool>>;
-// TODO: 这个地方不想用 String, 额外 clone 了一次
-pub type ProxyInfo = HashMap<String, Info>;
+pub type ProxyInfo = HashMap<SocketAddrV4, Info>;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Info {

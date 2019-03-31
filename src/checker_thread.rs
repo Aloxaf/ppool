@@ -48,10 +48,10 @@ fn check_stable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
 
         pool.execute(move || {
             if !check_proxy(&proxy, checker_config.clone()) {
-                info!("验证成功: {}:{}", proxy.ip(), proxy.port());
+                info!("验证失败: {}:{}", proxy.ip(), proxy.port());
                 inc_failed_cnt(proxy_pool.clone(), &proxy);
             } else {
-                info!("验证失败: {}:{}", proxy.ip(), proxy.port());
+                info!("验证成功: {}:{}", proxy.ip(), proxy.port());
                 inc_success_cnt(proxy_pool.clone(), &proxy);
             }
 
@@ -94,10 +94,10 @@ fn check_unstable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
 
         pool.execute(move || {
             if check_proxy(&proxy, checker_config.clone()) {
-                info!("验证成功: {}:{}", proxy.ip(), proxy.port());
+                info!("验证失败: {}:{}", proxy.ip(), proxy.port());
                 inc_failed_cnt(proxy_pool.clone(), &proxy);
             } else {
-                info!("验证失败: {}:{}", proxy.ip(), proxy.port());
+                info!("验证成功: {}:{}", proxy.ip(), proxy.port());
                 inc_success_cnt(proxy_pool.clone(), &proxy);
             }
 

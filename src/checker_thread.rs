@@ -47,12 +47,12 @@ fn check_stable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
         let checker_config = checker_config.clone();
 
         pool.execute(move || {
-            if !check_proxy(&proxy, checker_config.clone()) {
-                info!("验证失败: {}:{}", proxy.ip(), proxy.port());
-                inc_failed_cnt(proxy_pool.clone(), &proxy);
-            } else {
+            if check_proxy(&proxy, checker_config.clone()) {
                 info!("验证成功: {}:{}", proxy.ip(), proxy.port());
                 inc_success_cnt(proxy_pool.clone(), &proxy);
+            } else {
+                info!("验证失败: {}:{}", proxy.ip(), proxy.port());
+                inc_failed_cnt(proxy_pool.clone(), &proxy);
             }
 
             let mut proxy_pool = proxy_pool.write().expect("无法获取锁");
@@ -94,11 +94,11 @@ fn check_unstable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
 
         pool.execute(move || {
             if check_proxy(&proxy, checker_config.clone()) {
-                info!("验证失败: {}:{}", proxy.ip(), proxy.port());
-                inc_failed_cnt(proxy_pool.clone(), &proxy);
-            } else {
                 info!("验证成功: {}:{}", proxy.ip(), proxy.port());
                 inc_success_cnt(proxy_pool.clone(), &proxy);
+            } else {
+                info!("验证失败: {}:{}", proxy.ip(), proxy.port());
+                inc_failed_cnt(proxy_pool.clone(), &proxy);
             }
 
             let mut proxy_pool = proxy_pool.write().expect("无法获取锁");

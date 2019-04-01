@@ -128,7 +128,7 @@ fn run() -> Result<(), Error> {
                     // TODO: 这个"备份"也单独开一个线程?
                     info!("写入到磁盘");
                     let data = serde_json::to_string_pretty(&proxy_pool).expect("无法序列化");
-                    let mut file = File::create(DATA_PATH.clone()).expect("无法创建文件");
+                    let mut file = File::create(&*DATA_PATH).expect("无法创建文件");
                     file.write_all(data.as_bytes()).expect("无法写入");
 
                     info!("等待{}秒再次验证...", checker_config.interval);

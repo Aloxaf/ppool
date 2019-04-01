@@ -57,13 +57,11 @@ impl ProxyPool {
     }
 
     /// 插入新代理到不稳定列表中
-    pub fn insert_unstable(&mut self, proxy: Proxy) {
+    pub fn insert_unstable(self: Arc<Self>, proxy: Proxy) {
         let exist = self.info.read().unwrap().get(&proxy.get_key()).is_some();
         if !exist {
-            self.info
-                .write()
-                .unwrap()
-                .insert(proxy.get_key(), Default::default());
+            let mut proxy_info = self.info.write().unwrap();
+            proxy_info.insert(proxy.get_key(), Default::default());
             self.list.write().unwrap().unstable.push(proxy);
         }
     }
@@ -85,28 +83,20 @@ impl ProxyPool {
     /// 从不稳定列表中删除一个代理
     pub fn remove_unstable(self: Arc<Self>, proxy: &Proxy) {
         // 反正都用 rocket 了, unstable feature 用起来!
-        self.list
-            .write()
-            .unwrap()
-            .unstable
-            .remove_item(proxy)
-            .unwrap();
+        let mut proxy_list = self.list.write().unwrap();
+        proxy_list.unstable.remove_item(proxy).unwrap();
         self.info.write().unwrap().remove(&proxy.get_key()).unwrap();
     }
 
     /// 从稳定列表中删除一个代理
     pub fn remove_stable(self: Arc<Self>, proxy: &Proxy) {
-        self.list
-            .write()
-            .unwrap()
-            .stable
-            .remove_item(proxy)
-            .unwrap();
+        let mut proxy_list = self.list.write().unwrap();
+        proxy_list.stable.remove_item(proxy).unwrap();
         self.info.write().unwrap().remove(&proxy.get_key()).unwrap();
     }
 
     /// 从稳定列表中随机取出一个代理
-    pub fn get_random(&self) -> Option<Proxy> {
+    pub fn get_random(self: Arc<Self>) -> Option<Proxy> {
         // TODO: 传引用?
         let mut rng = thread_rng();
         let list = self.list.read().unwrap();
@@ -115,7 +105,7 @@ impl ProxyPool {
 
     /// 根据条件筛选代理
     pub fn select(
-        &self,
+        self: Arc<Self>,
         ssl_type: Option<String>,
         anonymity: Option<String>,
         stability: Option<f32>,
@@ -148,7 +138,7 @@ impl ProxyPool {
     }
 
     pub fn select_random(
-        &self,
+        self: Arc<Self>,
         ssl_type: Option<String>,
         anonymity: Option<String>,
         stability: Option<f32>,
@@ -160,13 +150,13 @@ impl ProxyPool {
     }
 
     /// 获取未验证代理的引用
-    pub fn get_unstable(&self) -> Vec<Proxy> {
+    pub fn get_unstable(self: Arc<Self>) -> Vec<Proxy> {
         self.list.read().unwrap().unstable.clone()
         // FIXME: 究极 clone
     }
 
     /// 获取已验证代理的引用
-    pub fn get_stable(&self) -> Vec<Proxy> {
+    pub fn get_stable(self: Arc<Self>) -> Vec<Proxy> {
         self.list.read().unwrap().stable.clone()
         // FIXME: 究极 clone
     }
@@ -187,7 +177,7 @@ impl ProxyPool {
         info.fail_times = 0;
     }
 
-    pub fn get_info(&self, proxy: &Proxy) -> (f64, u32, u8) {
+    pub fn get_info(self: Arc<Self>, proxy: &Proxy) -> (f64, u32, u8) {
         let info = self.info.read().unwrap();
         let proxy_info = info.get(&proxy.get_key()).unwrap();
         (

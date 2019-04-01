@@ -17,8 +17,8 @@ fn index(_state: State<MyState>) -> &'static str {
 #[get("/get_status")]
 fn get_status(state: State<MyState>) -> String {
     let proxy_pool = &state.0;
-    let stable_cnt = proxy_pool.get_stable().len();
-    let unstable_cnt = proxy_pool.get_unstable().len();
+    let stable_cnt = proxy_pool.clone().get_stable().len();
+    let unstable_cnt = proxy_pool.clone().get_unstable().len();
     format!(
         r#"{{
   "total": {},
@@ -43,10 +43,11 @@ fn get_single(
 
     // 啥参数都没有, 直接调用 get_random, O(1) 时间复杂度
     let proxy = if ssl_type.is_none() && anonymity.is_none() && stability.is_none() {
-        proxy_pool.get_random().unwrap()
+        proxy_pool.clone().get_random().unwrap()
     // 有参数的话, 使用 O(n) 复杂度的 select_random
     } else {
         proxy_pool
+            .clone()
             .select_random(ssl_type, anonymity, stability)
             .unwrap()
     };
@@ -64,10 +65,10 @@ fn get_all(
     let proxy_pool = &state.0;
     // get_stable 返回 &Vec<T>, select 返回 Vec<&T>, 所以这个地方无法简化成 get_single 的逻辑
     if ssl_type.is_none() && anonymity.is_none() && stability.is_none() {
-        let proxy = proxy_pool.get_stable();
+        let proxy = proxy_pool.clone().get_stable();
         serde_json::to_string_pretty(&proxy).unwrap()
     } else {
-        let proxy = proxy_pool.select(ssl_type, anonymity, stability);
+        let proxy = proxy_pool.clone().select(ssl_type, anonymity, stability);
         serde_json::to_string_pretty(&proxy).unwrap()
     }
 }

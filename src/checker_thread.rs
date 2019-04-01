@@ -9,7 +9,7 @@ use threadpool::ThreadPool;
 fn check_stable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
     // TODO: 避免 clone ?
     // 为了避免验证代理时造成阻塞, 先 clone 一遍
-    let stable = proxy_pool.get_stable();
+    let stable = proxy_pool.clone().get_stable();
     let pool = ThreadPool::new(checker_config.max_workers);
 
     // 反正是 clone 的, consume 掉也无所谓
@@ -27,7 +27,7 @@ fn check_stable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
                 proxy_pool.clone().inc_failed_cnt(&proxy);
             }
 
-            let (stability, _, fail_times) = proxy_pool.get_info(&proxy);
+            let (stability, _, fail_times) = proxy_pool.clone().get_info(&proxy);
 
             // 稳定率过低
             if stability < checker_config.stability.level_down {
@@ -51,7 +51,7 @@ fn check_stable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
 // TODO: 这两个函数大体框架一致, 是否能简化一下?
 // 检查不稳定代理
 fn check_unstable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
-    let unstable = proxy_pool.get_unstable();
+    let unstable = proxy_pool.clone().get_unstable();
     let pool = ThreadPool::new(checker_config.max_workers);
 
     for proxy in unstable {
@@ -67,7 +67,7 @@ fn check_unstable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
                 proxy_pool.clone().inc_failed_cnt(&proxy);
             }
 
-            let (stability, check_cnt, fail_times) = proxy_pool.get_info(&proxy);
+            let (stability, check_cnt, fail_times) = proxy_pool.clone().get_info(&proxy);
 
             // 检测次数 & 稳定率达标
             if check_cnt >= checker_config.min_cnt_level_up

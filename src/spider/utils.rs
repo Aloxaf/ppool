@@ -94,7 +94,7 @@ pub fn get_xpath(
 
 /// 检测代理可用性
 #[inline]
-pub fn check_proxy(proxy: &Proxy, config: Arc<CheckerConfig>) -> bool {
+pub fn check_proxy(proxy: &Proxy, config: &Arc<CheckerConfig>) -> bool {
     let ssl_type = proxy.ssl_type();
     let proxy = reqwest::Proxy::all(&format!("http://{}:{}", proxy.ip(), proxy.port())).unwrap();
     let client = Client::builder()

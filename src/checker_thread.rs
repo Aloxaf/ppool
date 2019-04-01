@@ -11,7 +11,7 @@ use threadpool::ThreadPool;
 fn inc_failed_cnt(proxy_pool: &AProxyPool, proxy: &Proxy) {
     let mut proxy_pool = proxy_pool.write().expect("inc_failed_cnt: 无法获取锁");
     let mut info = proxy_pool
-        .info
+        .get_info_mut()
         .get_mut(&proxy.get_key())
         .expect("inc_failed_cnt: 查无此键");
     info.failed += 1;
@@ -22,7 +22,7 @@ fn inc_failed_cnt(proxy_pool: &AProxyPool, proxy: &Proxy) {
 fn inc_success_cnt(proxy_pool: &AProxyPool, proxy: &Proxy) {
     let mut proxy_pool = proxy_pool.write().expect("inc_success_cnt: 无法获取锁");
     let mut info = proxy_pool
-        .info
+        .get_info_mut()
         .get_mut(&proxy.get_key())
         .expect("inc_success_cnt: 查无此键");
     info.success += 1;
@@ -56,7 +56,7 @@ fn check_stable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
             }
 
             let mut proxy_pool = proxy_pool.write().expect("无法获取锁");
-            let info = proxy_pool.info.get(&proxy.get_key()).expect("查无此键");
+            let info = proxy_pool.get_info_mut().get(&proxy.get_key()).expect("查无此键");
             let stability = info.stability();
 
             // 稳定率过低
@@ -102,7 +102,7 @@ fn check_unstable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
             }
 
             let mut proxy_pool = proxy_pool.write().expect("无法获取锁");
-            let info = proxy_pool.info.get(&proxy.get_key()).expect("查无此键");
+            let info = proxy_pool.get_info_mut().get(&proxy.get_key()).expect("查无此键");
             let stability = info.stability();
 
             // 检测次数 & 稳定率达标

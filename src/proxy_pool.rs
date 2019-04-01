@@ -31,18 +31,17 @@ impl Info {
     }
 }
 
-// 这个地方简直疯掉了, 干脆全部暴露出来让调用者自己处理
 /// 代理池
 /// O(1) 的插入时间复杂度
 /// O(1) 的随机取时间复杂度
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ProxyPool {
     /// 不稳定代理
-    pub unstable: Vec<Proxy>,
+    unstable: Vec<Proxy>,
     /// 稳定代理
-    pub stable: Vec<Proxy>,
+    stable: Vec<Proxy>,
     /// 用于去重 & 记录验证失败次数
-    pub info: ProxyInfo,
+    info: ProxyInfo,
     // TODO: 此处 info 可否单独提出来, 因为 info 需要被频繁改动, 放在一起影响并发性能
 }
 
@@ -143,8 +142,8 @@ impl ProxyPool {
     }
 
     /// 获取代理其他信息的引用
-    pub fn get_info(&self) -> &ProxyInfo {
-        &self.info
+    pub fn get_info_mut(&mut self) -> &mut ProxyInfo {
+        &mut self.info
     }
 
     /// 设置代理信息

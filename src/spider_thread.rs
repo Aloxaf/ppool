@@ -30,8 +30,7 @@ pub fn spider_thread(proxy_pool: AProxyPool, spider_config: &SpiderConfig) {
             }
             Ok(v) => v,
         };
-        let mut proxy_pool = proxy_pool.write().expect("spider_thread: 无法获取锁");
-        proxy_pool.extend_unstable(proxies);
+        proxy_pool.clone().extend_unstable(proxies);
     }
 
     for rules in &spider_config.common_regex {
@@ -54,8 +53,7 @@ pub fn spider_thread(proxy_pool: AProxyPool, spider_config: &SpiderConfig) {
             }
             Ok(v) => v,
         };
-        let mut proxy_pool = proxy_pool.write().expect("spider_thread: 无法获取锁");
-        proxy_pool.extend_unstable(proxies);
+        proxy_pool.clone().extend_unstable(proxies);
     }
     info!("代理爬取结束");
 }

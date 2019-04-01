@@ -2,15 +2,23 @@ use crate::spider::proxy::*;
 use rand::{seq::SliceRandom, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::mem;
 use std::net::SocketAddrV4;
 use std::sync::{Arc, RwLock};
 
-pub type AProxyPool = Arc<RwLock<ProxyPool>>;
-pub type ProxyInfo = HashMap<SocketAddrV4, Info>;
+pub type AProxyPool = Arc<ProxyPool>;
+pub type ProxyInfo = RwLock<HashMap<SocketAddrV4, _ProxyInfo>>;
+pub type ProxyList = RwLock<_ProxyList>;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
-pub struct Info {
+pub struct _ProxyList {
+    /// 不稳定代理
+    unstable: Vec<Proxy>,
+    /// 稳定代理
+    stable: Vec<Proxy>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct _ProxyInfo {
     /// 成功验证次数
     pub success: u32,
     /// 失败验证次数
@@ -19,7 +27,7 @@ pub struct Info {
     pub fail_times: u8,
 }
 
-impl Info {
+impl _ProxyInfo {
     #[inline]
     pub fn stability(&self) -> f64 {
         f64::from(self.success) / f64::from(self.check_cnt())
@@ -36,15 +44,13 @@ impl Info {
 /// O(1) 的随机取时间复杂度
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ProxyPool {
-    /// 不稳定代理
-    unstable: Vec<Proxy>,
-    /// 稳定代理
-    stable: Vec<Proxy>,
-    /// 用于去重 & 记录验证失败次数
+    list: ProxyList,
     info: ProxyInfo,
-    // TODO: 此处 info 可否单独提出来, 因为 info 需要被频繁改动, 放在一起影响并发性能
 }
 
+// TODO: 一堆 unwrap() ?
+// &mut self/&self 时由于可能线程不安全, 无法把 Error 传来传去
+// 那 Arc<Self> 呢
 impl ProxyPool {
     pub fn new() -> Self {
         Default::default()
@@ -52,42 +58,59 @@ impl ProxyPool {
 
     /// 插入新代理到不稳定列表中
     pub fn insert_unstable(&mut self, proxy: Proxy) {
-        let exist = self.info.get(&proxy.get_key()).is_some();
+        let exist = self.info.read().unwrap().get(&proxy.get_key()).is_some();
         if !exist {
-            self.info.insert(proxy.get_key(), Default::default());
-            self.unstable.push(proxy);
+            self.info
+                .write()
+                .unwrap()
+                .insert(proxy.get_key(), Default::default());
+            self.list.write().unwrap().unstable.push(proxy);
         }
     }
 
     /// 移动代理到稳定列表中
-    pub fn move_to_stable(&mut self, proxy: &Proxy) {
-        let proxy = self.unstable.remove_item(&proxy).unwrap();
-        self.stable.push(proxy);
+    pub fn move_to_stable(self: Arc<Self>, proxy: &Proxy) {
+        let mut proxy_list = self.list.write().unwrap();
+        let proxy = proxy_list.unstable.remove_item(&proxy).unwrap();
+        proxy_list.stable.push(proxy);
     }
 
     /// 移动代理到不稳定列表中
-    pub fn move_to_unstable(&mut self, proxy: &Proxy) {
-        let proxy = self.stable.remove_item(&proxy).unwrap();
-        self.unstable.push(proxy);
+    pub fn move_to_unstable(self: Arc<Self>, proxy: &Proxy) {
+        let mut proxy_list = self.list.write().unwrap();
+        let proxy = proxy_list.stable.remove_item(&proxy).unwrap();
+        proxy_list.unstable.push(proxy);
     }
 
     /// 从不稳定列表中删除一个代理
-    pub fn remove_unstable(&mut self, proxy: &Proxy) {
+    pub fn remove_unstable(self: Arc<Self>, proxy: &Proxy) {
         // 反正都用 rocket 了, unstable feature 用起来!
-        self.unstable.remove_item(proxy).unwrap();
-        self.info.remove(&proxy.get_key()).unwrap();
+        self.list
+            .write()
+            .unwrap()
+            .unstable
+            .remove_item(proxy)
+            .unwrap();
+        self.info.write().unwrap().remove(&proxy.get_key()).unwrap();
     }
 
     /// 从稳定列表中删除一个代理
-    pub fn remove_stable(&mut self, proxy: &Proxy) {
-        self.stable.remove_item(proxy).unwrap();
-        self.info.remove(&proxy.get_key()).unwrap();
+    pub fn remove_stable(self: Arc<Self>, proxy: &Proxy) {
+        self.list
+            .write()
+            .unwrap()
+            .stable
+            .remove_item(proxy)
+            .unwrap();
+        self.info.write().unwrap().remove(&proxy.get_key()).unwrap();
     }
 
     /// 从稳定列表中随机取出一个代理
-    pub fn get_random(&self) -> Option<&Proxy> {
+    pub fn get_random(&self) -> Option<Proxy> {
+        // TODO: 传引用?
         let mut rng = thread_rng();
-        self.stable.choose(&mut rng)
+        let list = self.list.read().unwrap();
+        list.stable.choose(&mut rng).cloned()
     }
 
     /// 根据条件筛选代理
@@ -96,8 +119,12 @@ impl ProxyPool {
         ssl_type: Option<String>,
         anonymity: Option<String>,
         stability: Option<f32>,
-    ) -> Vec<&Proxy> {
-        let mut iter = Box::new(self.stable.iter()) as Box<Iterator<Item = &Proxy>>;
+    ) -> Vec<Proxy> {
+        let proxy_list = self.list.read().unwrap();
+        let proxy_info = self.info.read().unwrap();
+        // 此处将所有 Iterator 泛化为 Iterator<Item = &Proxy>, 以便使用同一个变量存储中间结果
+        // 省去 collect 开销
+        let mut iter = Box::new(proxy_list.stable.iter()) as Box<Iterator<Item = &Proxy>>;
         if let Some(ssl_type) = ssl_type {
             let ssl_type = ssl_type.parse().unwrap();
             iter = Box::new(iter.filter(move |proxy| proxy.ssl_type() == ssl_type))
@@ -110,13 +137,14 @@ impl ProxyPool {
         }
         if let Some(stability) = stability {
             iter = Box::new(iter.filter(move |proxy| {
-                let item = &self.info[&proxy.get_key()];
+                let item = &proxy_info[&proxy.get_key()];
                 let failed = item.failed as f32;
                 let success = item.success as f32;
                 success / (success + failed) >= stability
             })) as Box<Iterator<Item = &Proxy>>;
         }
-        iter.collect()
+        iter.cloned().collect()
+        // FIXME: 究极 clone
     }
 
     pub fn select_random(
@@ -124,7 +152,7 @@ impl ProxyPool {
         ssl_type: Option<String>,
         anonymity: Option<String>,
         stability: Option<f32>,
-    ) -> Option<&Proxy> {
+    ) -> Option<Proxy> {
         let mut rng = thread_rng();
         self.select(ssl_type, anonymity, stability)
             .choose(&mut rng)
@@ -132,28 +160,52 @@ impl ProxyPool {
     }
 
     /// 获取未验证代理的引用
-    pub fn get_unstable(&self) -> &Vec<Proxy> {
-        &self.unstable
+    pub fn get_unstable(&self) -> Vec<Proxy> {
+        self.list.read().unwrap().unstable.clone()
+        // FIXME: 究极 clone
     }
 
     /// 获取已验证代理的引用
-    pub fn get_stable(&self) -> &Vec<Proxy> {
-        &self.stable
+    pub fn get_stable(&self) -> Vec<Proxy> {
+        self.list.read().unwrap().stable.clone()
+        // FIXME: 究极 clone
     }
 
-    /// 获取代理其他信息的引用
-    pub fn get_info_mut(&mut self) -> &mut ProxyInfo {
-        &mut self.info
+    /// 代理验证失败计数 +1
+    pub fn inc_failed_cnt(self: Arc<Self>, proxy: &Proxy) {
+        let mut info = self.info.write().unwrap();
+        let mut info = info.get_mut(&proxy.get_key()).unwrap();
+        info.failed += 1;
+        info.fail_times += 1;
     }
 
-    /// 设置代理信息
-    pub fn set_info(&mut self, info: ProxyInfo) {
-        mem::replace(&mut self.info, info);
+    /// 代理验证成功计数 +1
+    pub fn inc_success_cnt(self: Arc<Self>, proxy: &Proxy) {
+        let mut info = self.info.write().unwrap();
+        let mut info = info.get_mut(&proxy.get_key()).unwrap();
+        info.success += 1;
+        info.fail_times = 0;
     }
 
-    pub fn extend_unstable<T: IntoIterator<Item = Proxy>>(&mut self, iter: T) {
+    pub fn get_info(&self, proxy: &Proxy) -> (f64, u32, u8) {
+        let info = self.info.read().unwrap();
+        let proxy_info = info.get(&proxy.get_key()).unwrap();
+        (
+            proxy_info.stability(),
+            proxy_info.check_cnt(),
+            proxy_info.fail_times,
+        )
+    }
+
+    pub fn extend_unstable<T: IntoIterator<Item = Proxy>>(self: Arc<Self>, iter: T) {
+        let mut proxy_info = self.info.write().unwrap();
+        let mut proxy_list = self.list.write().unwrap();
         for proxy in iter {
-            self.insert_unstable(proxy);
+            let exist = proxy_info.get(&proxy.get_key()).is_some();
+            if !exist {
+                proxy_info.insert(proxy.get_key(), Default::default());
+                proxy_list.unstable.push(proxy);
+            }
         }
     }
 }

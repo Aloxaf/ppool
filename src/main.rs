@@ -6,7 +6,7 @@ use log::{debug, info};
 use ppool::{proxy_pool::*, *};
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::thread::{self, sleep};
 use std::time::Duration;
@@ -35,9 +35,9 @@ fn init_proxy_pool() -> Result<AProxyPool, Error> {
     // 存在 proxies.json 的话, 读取 & 反序列化之
     if Path::new(&*DATA_PATH).exists() {
         let proxy_pool = serde_json::from_reader(File::open(&*DATA_PATH)?)?;
-        Ok(Arc::new(RwLock::new(proxy_pool)))
+        Ok(Arc::new(proxy_pool))
     } else {
-        Ok(Arc::new(RwLock::new(ProxyPool::new())))
+        Ok(Arc::new(ProxyPool::new()))
     }
 }
 

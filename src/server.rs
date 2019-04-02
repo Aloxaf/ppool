@@ -2,8 +2,28 @@ use crate::proxy_pool::*;
 use rocket::{get, routes, State};
 use std::sync::{Arc, RwLock};
 
-// 代理池, 是否重载配置, 管理密码
-type MyState = (AProxyPool, Arc<RwLock<bool>>, Arc<RwLock<Option<String>>>);
+pub struct MyState {
+    /// 代理池
+    proxy_pool: AProxyPool,
+    /// 是否重载配置
+    reload_flag: Arc<RwLock<bool>>,
+    /// 管理密码
+    password: Arc<RwLock<Option<String>>>,
+}
+
+impl MyState {
+    pub fn new(
+        proxy_pool: AProxyPool,
+        reload_flag: Arc<RwLock<bool>>,
+        password: Arc<RwLock<Option<String>>>,
+    ) -> Self {
+        Self {
+            proxy_pool,
+            reload_flag,
+            password,
+        }
+    }
+}
 
 #[get("/")]
 fn index(_state: State<MyState>) -> &'static str {
@@ -16,9 +36,9 @@ fn index(_state: State<MyState>) -> &'static str {
 
 #[get("/get_status")]
 fn get_status(state: State<MyState>) -> String {
-    let proxy_pool = &state.0;
-    let stable_cnt = proxy_pool.clone().get_stable().len();
-    let unstable_cnt = proxy_pool.clone().get_unstable().len();
+    let proxy_pool = &state.proxy_pool;
+    let stable_cnt = proxy_pool.get_stable().len();
+    let unstable_cnt = proxy_pool.get_unstable().len();
     format!(
         r#"{{
   "total": {},
@@ -39,7 +59,7 @@ fn get_single(
     anonymity: Option<String>,
     stability: Option<f32>,
 ) -> String {
-    let proxy_pool = &state.0;
+    let proxy_pool = &state.proxy_pool;
 
     // 啥参数都没有, 直接调用 get_random, O(1) 时间复杂度
     let proxy = if ssl_type.is_none() && anonymity.is_none() && stability.is_none() {
@@ -62,11 +82,11 @@ fn get_all(
     anonymity: Option<String>,
     stability: Option<f32>,
 ) -> String {
-    let proxy_pool = &state.0;
+    let proxy_pool = &state.proxy_pool;
     // get_stable 返回 &Vec<T>, select 返回 Vec<&T>, 所以这个地方无法简化成 get_single 的逻辑
     if ssl_type.is_none() && anonymity.is_none() && stability.is_none() {
-        let proxy = proxy_pool.clone().get_stable();
-        serde_json::to_string_pretty(&proxy).unwrap()
+        let proxy = &*proxy_pool.get_stable();
+        serde_json::to_string_pretty(proxy).unwrap()
     } else {
         let proxy = proxy_pool.clone().select(ssl_type, anonymity, stability);
         serde_json::to_string_pretty(&proxy).unwrap()
@@ -78,8 +98,8 @@ fn get_all(
 
 #[get("/reload?<password>")]
 fn reload(state: State<MyState>, password: Option<String>) -> &'static str {
-    if *state.2.read().unwrap() == password {
-        *state.1.write().unwrap() = true;
+    if *state.password.read().unwrap() == password {
+        *state.reload_flag.write().unwrap() = true;
         r#"{{
     "success": true
 }}"#

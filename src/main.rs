@@ -3,6 +3,7 @@ use clap::{load_yaml, App};
 use failure::{format_err, Error};
 use lazy_static::lazy_static;
 use log::{debug, info};
+use ppool::server::MyState;
 use ppool::{proxy_pool::*, *};
 use std::fs::File;
 use std::io::prelude::*;
@@ -74,8 +75,7 @@ fn run() -> Result<(), Error> {
         let proxy_pool = proxy_pool.clone();
         let reload = reload.clone();
         let password = password.clone();
-        // TODO: 此处使用元组可读性太低了点...
-        thread::spawn(|| ppool::server::launch_rocket((proxy_pool, reload, password)))
+        thread::spawn(|| ppool::server::launch_rocket(MyState::new(proxy_pool, reload, password)))
     };
 
     thread::spawn(move || loop {

@@ -1,4 +1,5 @@
 use crate::spider::proxy::*;
+use owning_ref::RwLockReadGuardRef;
 use rand::{seq::SliceRandom, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -97,7 +98,6 @@ impl ProxyPool {
 
     /// 从稳定列表中随机取出一个代理
     pub fn get_random(self: Arc<Self>) -> Option<Proxy> {
-        // TODO: 传引用?
         let mut rng = thread_rng();
         let list = self.list.read().unwrap();
         list.stable.choose(&mut rng).cloned()
@@ -150,15 +150,13 @@ impl ProxyPool {
     }
 
     /// 获取未验证代理的引用
-    pub fn get_unstable(self: Arc<Self>) -> Vec<Proxy> {
-        self.list.read().unwrap().unstable.clone()
-        // FIXME: 究极 clone
+    pub fn get_unstable(&self) -> RwLockReadGuardRef<_ProxyList, Vec<Proxy>> {
+        RwLockReadGuardRef::new(self.list.read().unwrap()).map(|list| &list.unstable)
     }
 
     /// 获取已验证代理的引用
-    pub fn get_stable(self: Arc<Self>) -> Vec<Proxy> {
-        self.list.read().unwrap().stable.clone()
-        // FIXME: 究极 clone
+    pub fn get_stable(&self) -> RwLockReadGuardRef<_ProxyList, Vec<Proxy>> {
+        RwLockReadGuardRef::new(self.list.read().unwrap()).map(|list| &list.stable)
     }
 
     /// 代理验证失败计数 +1

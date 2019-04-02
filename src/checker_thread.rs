@@ -9,7 +9,7 @@ use threadpool::ThreadPool;
 fn check_stable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
     // TODO: 避免 clone ?
     // 为了避免验证代理时造成阻塞, 先 clone 一遍
-    let stable = proxy_pool.clone().get_stable();
+    let stable = proxy_pool.get_stable().clone();
     let pool = ThreadPool::new(checker_config.max_workers);
 
     // 反正是 clone 的, consume 掉也无所谓
@@ -51,7 +51,7 @@ fn check_stable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
 // TODO: 这两个函数大体框架一致, 是否能简化一下?
 // 检查不稳定代理
 fn check_unstable(proxy_pool: AProxyPool, checker_config: Arc<CheckerConfig>) {
-    let unstable = proxy_pool.clone().get_unstable();
+    let unstable = proxy_pool.get_unstable().clone();
     let pool = ThreadPool::new(checker_config.max_workers);
 
     for proxy in unstable {

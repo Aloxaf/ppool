@@ -16,12 +16,12 @@ cargo install --git https://github.com/Aloxaf/ppool
 RUST_LOG=ppool=debug ppool
 ```
 
-注: 可通过环境变量 `ROCKET_PORT` 来控制端口
+注: 可通过环境变量 `ROCKET_PORT` 来控制端口, 默认 8000
 
 ## 优点
 
 - 功能更全面: 记录代理的质量, 类型等数据. 接口更完善
-- 依赖少, 资源消耗更少, 小鸡也能跑
+- 依赖少, 资源消耗更少 (大概
 - 只有一个 elf/exe, 不觉得很 coooool 吗! (嗯, 这就是我最开始的想法
 
 ## 缺点

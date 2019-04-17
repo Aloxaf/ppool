@@ -1,10 +1,24 @@
+#![feature(vec_remove_item, proc_macro_hygiene, decl_macro)]
+#![feature(never_type)]
+
+mod checker_thread;
+mod config;
+mod proxy_pool;
+mod server;
+mod spider;
+mod spider_thread;
+
+use crate::checker_thread::checker_thread;
+use crate::config::*;
+use crate::proxy_pool::*;
+use crate::server::MyState;
+use crate::spider_thread::spider_thread;
+
 use app_dirs::*;
 use clap::{load_yaml, App};
 use failure::{format_err, Error};
 use lazy_static::lazy_static;
 use log::{debug, info};
-use ppool::server::MyState;
-use ppool::{proxy_pool::*, *};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -75,7 +89,7 @@ fn run() -> Result<(), Error> {
         let proxy_pool = proxy_pool.clone();
         let reload = reload.clone();
         let password = password.clone();
-        thread::spawn(|| ppool::server::launch_rocket(MyState::new(proxy_pool, reload, password)))
+        thread::spawn(|| crate::server::launch_rocket(MyState::new(proxy_pool, reload, password)))
     };
 
     thread::spawn(move || loop {

@@ -57,16 +57,6 @@ impl ProxyPool {
         Default::default()
     }
 
-    /// 插入新代理到不稳定列表中
-    pub fn insert_unstable(self: Arc<Self>, proxy: Proxy) {
-        let exist = self.info.read().unwrap().get(&proxy.get_key()).is_some();
-        if !exist {
-            let mut proxy_info = self.info.write().unwrap();
-            proxy_info.insert(proxy.get_key(), Default::default());
-            self.list.write().unwrap().unstable.push(proxy);
-        }
-    }
-
     /// 移动代理到稳定列表中
     pub fn move_to_stable(self: Arc<Self>, proxy: &Proxy) {
         let mut proxy_list = self.list.write().unwrap();
@@ -90,7 +80,7 @@ impl ProxyPool {
     }
 
     /// 从稳定列表中删除一个代理
-    pub fn remove_stable(self: Arc<Self>, proxy: &Proxy) {
+    pub fn _remove_stable(self: Arc<Self>, proxy: &Proxy) {
         let mut proxy_list = self.list.write().unwrap();
         proxy_list.stable.remove_item(proxy).unwrap();
         self.info.write().unwrap().remove(&proxy.get_key()).unwrap();

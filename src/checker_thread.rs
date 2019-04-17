@@ -1,6 +1,6 @@
 use crate::config::CheckerConfig;
+use crate::proxy_pool::AProxyPool;
 use crate::spider::utils::check_proxy;
-use crate::AProxyPool;
 use log::info;
 use std::sync::Arc;
 use threadpool::ThreadPool;

@@ -1,8 +1,12 @@
 #![feature(vec_remove_item, proc_macro_hygiene, decl_macro)]
 #![feature(never_type)]
 
+#[macro_use]
+extern crate structopt;
+
 mod checker_thread;
 mod config;
+mod options;
 mod proxy_pool;
 mod server;
 mod spider;
@@ -10,15 +14,18 @@ mod spider_thread;
 
 use crate::checker_thread::checker_thread;
 use crate::config::*;
+use crate::options::Opt;
 use crate::proxy_pool::*;
 use crate::server::MyState;
+use crate::spider::getter::*;
 use crate::spider_thread::spider_thread;
 
 use app_dirs::*;
-use clap::{load_yaml, App};
 use failure::{format_err, Error};
 use lazy_static::lazy_static;
 use log::{debug, info};
+use structopt::StructOpt;
+
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -69,16 +76,71 @@ fn init_config(config_file: Option<&String>) -> Result<Config, Error> {
     }
 }
 
-fn run() -> Result<(), Error> {
-    let yaml = load_yaml!("cli.yml");
-    let matches = App::from_yaml(yaml).get_matches();
+fn test_proxy(config_file: Option<String>, rule_name: &str) {
+    let config = init_config(config_file.as_ref()).expect("解析配置文件错误");
 
-    if matches.occurrences_of("print_config") != 0 {
-        println!("{}", DEFAULT_CONFIG);
-        return Ok(());
+    for rules in &config.spider.common_table {
+        let CommonTable {
+            name,
+            urls,
+            xpath_line,
+            xpath_col,
+            info_index,
+            ..
+        } = rules;
+
+        if name != rule_name {
+            continue;
+        }
+
+        match table_getter(name, urls, xpath_line, xpath_col, info_index) {
+            Err(e) => eprintln!("{}", e),
+            Ok(v) => {
+                for proxy in &v {
+                    println!("{:?}", proxy);
+                }
+            }
+        };
     }
 
-    let config_file = matches.value_of("config").map(ToOwned::to_owned);
+    for rules in &config.spider.common_regex {
+        let CommonRegex {
+            name,
+            urls,
+            ip,
+            port,
+            anonymity,
+            ssl_type,
+            ..
+        } = rules;
+
+        if name != rule_name {
+            continue;
+        }
+
+        match regex_getter(name, urls, ip, port, anonymity, ssl_type) {
+            Err(e) => eprintln!("{}", e),
+            Ok(v) => {
+                for proxy in &v {
+                    println!("{:?}", proxy);
+                }
+            }
+        };
+    }
+}
+
+fn run() -> Result<(), Error> {
+    let args: Opt = Opt::from_args();
+
+    let config_file = args.config.clone();
+
+    if args.print_config {
+        println!("{}", DEFAULT_CONFIG);
+        return Ok(());
+    } else if args.test.is_some() {
+        test_proxy(config_file, args.test.as_ref().unwrap());
+        return Ok(());
+    }
 
     let proxy_pool = init_proxy_pool()?;
     let reload = Arc::new(RwLock::new(false));
@@ -131,7 +193,8 @@ fn run() -> Result<(), Error> {
         };
 
         // 代理验证线程
-        let checker_thread = {
+        // FIXME: rustc 说 checker_thread 未被使用, 让我加个 _ 前缀
+        let _checker_thread = {
             let proxy_pool = proxy_pool.clone();
             let reload = reload.clone();
             thread::spawn(move || {
@@ -158,7 +221,7 @@ fn run() -> Result<(), Error> {
         };
 
         spider_thread.join().expect("爬虫线程崩溃");
-        checker_thread.join().expect("验证线程崩溃");
+        _checker_thread.join().expect("验证线程崩溃");
     });
 
     server.join().expect("服务器线程崩溃");

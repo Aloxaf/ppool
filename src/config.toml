@@ -56,6 +56,7 @@ xpath_line = ".//table[@id=\"ip_list\"]//tr[position()>1]"
 # 取出所在列的 XPATH
 xpath_col = "./td[not(*)]/text()"
 # 所需信息的在列中的下标(从 0 开始)
+# 从左到右依次为 IP 端口 匿名性 SSL类型
 info_index = [0, 1, 2, 3]
 
 [[spider.common_table]]
@@ -91,6 +92,15 @@ name = "快代理"
 urls = ["https://www.kuaidaili.com/free/"]
 xpath_line = ".//table//tr[position()>1]"
 xpath_col = "./td/text()"
+info_index = [0, 1, 2, 3]
+
+[[spider.common_table]]
+enable = false
+name = "云代理"
+urls = ["http://www.ip3366.net/?stype=1&page=1"]
+xpath_line = ".//table//tr[position()>1]"
+xpath_col = ".//td/text()"
+# TODO: 云代理返回的网页似乎是 GBK 编码的, 导致代理类型全部被判断为透明
 info_index = [0, 1, 2, 3]
 
 # 使用正则提取

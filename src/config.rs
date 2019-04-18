@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-pub const DEFAULT_CONFIG: &str = include_str!("config.toml");
+pub const DEFAULT_CONFIG: &'static str = include_str!("config.toml");
 
 // 全员 pub
 // 这个地方一开始全部没有 pub

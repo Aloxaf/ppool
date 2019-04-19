@@ -8,10 +8,10 @@ use std::sync::{Arc, RwLock};
 
 pub type AProxyPool = Arc<ProxyPool>;
 pub type ProxyInfo = RwLock<HashMap<SocketAddrV4, _ProxyInfo>>;
-pub type ProxyList = RwLock<_ProxyList>;
+pub type ProxyList = RwLock<ProxyListInner>;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
-pub struct _ProxyList {
+pub struct ProxyListInner {
     /// 不稳定代理
     unstable: Vec<Proxy>,
     /// 稳定代理
@@ -140,12 +140,12 @@ impl ProxyPool {
     }
 
     /// 获取未验证代理的引用
-    pub fn get_unstable(&self) -> RwLockReadGuardRef<_ProxyList, Vec<Proxy>> {
+    pub fn get_unstable(&self) -> RwLockReadGuardRef<ProxyListInner, Vec<Proxy>> {
         RwLockReadGuardRef::new(self.list.read().unwrap()).map(|list| &list.unstable)
     }
 
     /// 获取已验证代理的引用
-    pub fn get_stable(&self) -> RwLockReadGuardRef<_ProxyList, Vec<Proxy>> {
+    pub fn get_stable(&self) -> RwLockReadGuardRef<ProxyListInner, Vec<Proxy>> {
         RwLockReadGuardRef::new(self.list.read().unwrap()).map(|list| &list.stable)
     }
 

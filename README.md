@@ -40,7 +40,7 @@ RUST_LOG=ppool=debug ppool
 - [x] 更多线程
 - [x] 更完善的错误处理(现在到处都是unwrap)
 - [x] 更完善的接口(能够根据需求预筛选)
-- [x] 更少 clone (更高性能)
+- [ ] 更少 clone (更高性能)
 - [ ] 更高并发性能
 - [x] 更好看的变量名 (
 - [x] 更方便地修改配置 (reload api)

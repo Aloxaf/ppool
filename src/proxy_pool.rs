@@ -104,16 +104,16 @@ impl ProxyPool {
         let proxy_info = self.info.read().unwrap();
         // 此处将所有 Iterator 泛化为 Iterator<Item = &Proxy>, 以便使用同一个变量存储中间结果
         // 省去 collect 开销
-        let mut iter = Box::new(proxy_list.stable.iter()) as Box<Iterator<Item = &Proxy>>;
+        let mut iter = Box::new(proxy_list.stable.iter()) as Box<dyn Iterator<Item = &Proxy>>;
         if let Some(ssl_type) = ssl_type {
             let ssl_type = ssl_type.parse().unwrap();
             iter = Box::new(iter.filter(move |proxy| proxy.ssl_type() == ssl_type))
-                as Box<Iterator<Item = &Proxy>>;
+                as Box<dyn Iterator<Item = &Proxy>>;
         }
         if let Some(anonymity) = anonymity {
             let anonymity = anonymity.parse().unwrap();
             iter = Box::new(iter.filter(move |proxy| proxy.anonymity() == anonymity))
-                as Box<Iterator<Item = &Proxy>>;
+                as Box<dyn Iterator<Item = &Proxy>>;
         }
         if let Some(stability) = stability {
             iter = Box::new(iter.filter(move |proxy| {
@@ -121,7 +121,7 @@ impl ProxyPool {
                 let failed = item.failed as f32;
                 let success = item.success as f32;
                 success / (success + failed) >= stability
-            })) as Box<Iterator<Item = &Proxy>>;
+            })) as Box<dyn Iterator<Item = &Proxy>>;
         }
         iter.cloned().collect()
         // FIXME: 究极 clone

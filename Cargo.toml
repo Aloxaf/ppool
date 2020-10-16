@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 app_dirs = "^1.2.1"
-env_logger = "0.7"
+env_logger = "0.8"
 failure = "0.1.8"
 itertools = "0.9"
 lazy_static = "1.4.0"

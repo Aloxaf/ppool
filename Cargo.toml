@@ -5,7 +5,7 @@ authors = ["Aloxaf <aloxafx@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-app_dirs = "^1.2.1"
+app_dirs = "^2.0.1"
 env_logger = "0.7"
 failure = "0.1.8"
 itertools = "0.9"
